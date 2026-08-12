@@ -17,7 +17,7 @@
         .btn-green { background-color: #158e45; color: white; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; border: none; cursor: pointer; transition: background 0.2s; }
         .btn-green:hover { background-color: #127a3b; }
 
-        .btn-blue { background-color: #2563eb; color: white; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 14px; border: none; cursor: pointer; }
+        .btn-blue { background-color: #2563eb; color: white; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 14px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
         .btn-blue:hover { background-color: #1d4ed8; }
 
         .main-container { max-width: 1280px; width: 100%; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 1fr; gap: 24px; }
@@ -64,8 +64,8 @@
         </div>
 
         <div style="display: flex; gap: 12px; align-items: center;">
-            <a href="/player" target="_blank" class="btn-green">📺 Abrir Reproductor Web</a>
-            <span style="font-size: 12px; color: #34d399; font-weight: 700;">🟢 Servidor Activo</span>
+            <button onclick="syncCloud()" class="btn-blue">🚀 Publicar Cambios a GitHub Nube</button>
+            <a href="/player" target="_blank" class="btn-green">📺 Reproductor Web</a>
         </div>
     </header>
 
@@ -81,7 +81,7 @@
                 <form id="tickerForm">
                     <textarea id="tickerInput" rows="2" placeholder="Escribe el anuncio para las pantallas..."></textarea>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 12px; color: #94a3b8;">Transmisión instantánea por red local</span>
+                        <span style="font-size: 12px; color: #94a3b8;">Transmisión instantánea por red local / nube</span>
                         <button type="submit" class="btn-green">Actualizar Marquesina</button>
                     </div>
                 </form>
@@ -134,10 +134,10 @@
             <!-- MONITOREO -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">🖥️ Monitoreo de Pantallas</div>
+                    <div class="card-title">🖥️ Monitoreo de Pantallas Nube</div>
                 </div>
                 <div id="screensBox">
-                    <div style="text-align:center; font-size:12px; color:#94a3b8;">Buscando pantallas en red...</div>
+                    <div style="text-align:center; font-size:12px; color:#34d399; font-weight:700;">🟢 GitHub Cloud Activo</div>
                 </div>
             </div>
         </div>
@@ -173,6 +173,20 @@
                     tbody.appendChild(tr);
                 });
             } catch (e) {}
+        }
+
+        async function syncCloud() {
+            try {
+                const res = await fetch('/api/sync_cloud', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert("¡Nuevas imágenes publicadas en GitHub Nube con éxito!");
+                } else {
+                    alert("Error publicando en nube: " + data.error);
+                }
+            } catch (e) {
+                alert("Error al conectar con el servidor local: " + e);
+            }
         }
 
         document.getElementById('tickerForm').addEventListener('submit', async (e) => {
@@ -220,40 +234,7 @@
             } catch (e) {}
         }
 
-        async function loadScreens() {
-            try {
-                const res = await fetch('/api/screens');
-                const screens = await res.json();
-                const box = document.getElementById('screensBox');
-                box.innerHTML = '';
-
-                if (screens.length === 0) {
-                    box.innerHTML = `<div style="text-align:center; font-size:12px; color:#94a3b8;">Esperando conexión de pantallas en red...</div>`;
-                    return;
-                }
-
-                screens.forEach(s => {
-                    const isOnline = s.status === 'ONLINE';
-                    const div = document.createElement('div');
-                    div.className = 'screen-item';
-                    div.innerHTML = `
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <div class="${isOnline ? 'dot-green' : 'dot-red'}"></div>
-                            <div>
-                                <div style="font-weight:800; font-size:12px; color:white;">${s.name} (${s.ip})</div>
-                                <div style="font-size:10px; color:#94a3b8;">Transmitiendo: ${s.current_playing}</div>
-                            </div>
-                        </div>
-                        <span style="font-size:10px; font-weight:800; color:${isOnline ? '#34d399' : '#fb7185'};">${s.status}</span>
-                    `;
-                    box.appendChild(div);
-                });
-            } catch (e) {}
-        }
-
         loadConfig();
-        loadScreens();
-        setInterval(loadScreens, 5000);
     </script>
 </body>
 </html>

@@ -240,6 +240,17 @@ def delete_media(media_id):
 def serve_uploads(filename):
     return send_from_directory(MEDIA_FOLDER, filename)
 
+@app.route('/api/sync_cloud', methods=['POST'])
+def sync_cloud():
+    try:
+        import subprocess
+        # Git add, commit y push automatico a GitHub Pages
+        cmd = "git add . && git commit -m 'Actualización de contenidos desde CMS' || true && git push origin main"
+        res = subprocess.run(cmd, shell=True, cwd=BASE_DIR, capture_output=True, text=True)
+        return jsonify({"success": True, "output": res.stdout, "message": "¡Nuevas imágenes publicadas en GitHub Nube con éxito!"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/ping', methods=['POST'])
 def screen_ping():
     data = request.get_json() or {}

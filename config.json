@@ -7,111 +7,95 @@
   "update_interval": 10,
   "media": [
     {
-      "id": "demo-banner-1",
-      "type": "image",
-      "name": "Banner Institucional 1",
-      "url": "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=431&h=767&q=80",
-      "duration": 15,
-      "target": "banner"
-    },
-    {
-      "id": "demo-banner-2",
-      "type": "image",
-      "name": "Banner Institucional 2",
-      "url": "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&w=431&h=767&q=80",
-      "duration": 15,
-      "target": "banner"
-    },
-    {
-      "id": "media-1786571345",
+      "id": "media-1786576795",
       "type": "image",
       "name": "LATERAL 5.png",
-      "url": "/uploads/LATERAL_5_1786571345.png",
-      "filename": "LATERAL_5_1786571345.png",
+      "url": "/uploads/LATERAL_5_1786576795.png",
+      "filename": "LATERAL_5_1786576795.png",
       "duration": 15,
       "target": "main"
     },
     {
-      "id": "media-1786571360",
+      "id": "media-1786576799",
       "type": "image",
       "name": "LATERAL 8.png",
-      "url": "/uploads/LATERAL_8_1786571360.png",
-      "filename": "LATERAL_8_1786571360.png",
+      "url": "/uploads/LATERAL_8_1786576799.png",
+      "filename": "LATERAL_8_1786576799.png",
       "duration": 15,
       "target": "main"
     },
     {
-      "id": "media-1786571362",
+      "id": "media-1786576802",
       "type": "image",
       "name": "LATERAL 7.png",
-      "url": "/uploads/LATERAL_7_1786571362.png",
-      "filename": "LATERAL_7_1786571362.png",
+      "url": "/uploads/LATERAL_7_1786576802.png",
+      "filename": "LATERAL_7_1786576802.png",
       "duration": 15,
       "target": "main"
     },
     {
-      "id": "media-1786571364",
+      "id": "media-1786576804",
       "type": "image",
       "name": "LATERAL 6.png",
-      "url": "/uploads/LATERAL_6_1786571364.png",
-      "filename": "LATERAL_6_1786571364.png",
+      "url": "/uploads/LATERAL_6_1786576804.png",
+      "filename": "LATERAL_6_1786576804.png",
       "duration": 15,
       "target": "main"
     },
     {
-      "id": "media-1786571366",
+      "id": "media-1786576807",
       "type": "image",
       "name": "LATERAL 4.png",
-      "url": "/uploads/LATERAL_4_1786571366.png",
-      "filename": "LATERAL_4_1786571366.png",
+      "url": "/uploads/LATERAL_4_1786576807.png",
+      "filename": "LATERAL_4_1786576807.png",
       "duration": 15,
       "target": "main"
     },
     {
-      "id": "media-1786571368",
+      "id": "media-1786576809",
       "type": "image",
       "name": "LATERAL 3.png",
-      "url": "/uploads/LATERAL_3_1786571368.png",
-      "filename": "LATERAL_3_1786571368.png",
+      "url": "/uploads/LATERAL_3_1786576809.png",
+      "filename": "LATERAL_3_1786576809.png",
       "duration": 15,
       "target": "main"
     },
     {
-      "id": "media-1786571370",
+      "id": "media-1786576812",
       "type": "image",
       "name": "LATERAL 2.png",
-      "url": "/uploads/LATERAL_2_1786571370.png",
-      "filename": "LATERAL_2_1786571370.png",
+      "url": "/uploads/LATERAL_2_1786576812.png",
+      "filename": "LATERAL_2_1786576812.png",
       "duration": 15,
       "target": "main"
     },
     {
-      "id": "media-1786571371",
+      "id": "media-1786576814",
       "type": "image",
       "name": "LATERALE 1.png",
-      "url": "/uploads/LATERALE_1_1786571371.png",
-      "filename": "LATERALE_1_1786571371.png",
+      "url": "/uploads/LATERALE_1_1786576814.png",
+      "filename": "LATERALE_1_1786576814.png",
       "duration": 15,
       "target": "main"
     },
     {
-      "id": "media-1786571373",
+      "id": "media-1786576816",
       "type": "image",
       "name": "META.png",
-      "url": "/uploads/META_1786571373.png",
-      "filename": "META_1786571373.png",
+      "url": "/uploads/META_1786576816.png",
+      "filename": "META_1786576816.png",
       "duration": 15,
       "target": "main"
     },
     {
-      "id": "media-1786571375",
+      "id": "media-1786576817",
       "type": "image",
       "name": "MAGICUENTA.png",
-      "url": "/uploads/MAGICUENTA_1786571375.png",
-      "filename": "MAGICUENTA_1786571375.png",
+      "url": "/uploads/MAGICUENTA_1786576817.png",
+      "filename": "MAGICUENTA_1786576817.png",
       "duration": 15,
       "target": "main"
     }
   ],
-  "last_updated": 1786573289.801812
+  "last_updated": 1786576819.5033212
 }
