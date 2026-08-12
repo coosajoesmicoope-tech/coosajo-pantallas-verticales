@@ -1,0 +1,68 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2575.6">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; -webkit-text-stroke: #000000}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; -webkit-text-stroke: #000000; min-height: 14.0px}
+    span.s1 {font-kerning: none}
+  </style>
+</head>
+<body>
+<p class="p1"><span class="s1"># Archivo: app.py</span></p>
+<p class="p1"><span class="s1">from flask import Flask, render_template, request, jsonify</span></p>
+<p class="p1"><span class="s1">import requests</span></p>
+<p class="p1"><span class="s1">from bs4 import BeautifulSoup</span></p>
+<p class="p1"><span class="s1">import os</span></p>
+<p class="p1"><span class="s1">from openai import OpenAI, OpenAIError</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1">app = Flask(__name__, static_folder='static', template_folder='templates')</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"># Leer la clave secreta de OpenAI</span></p>
+<p class="p1"><span class="s1">openai_api_key = os.getenv('OPENAI_API_KEY')</span></p>
+<p class="p1"><span class="s1">if not openai_api_key:</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>raise RuntimeError("Debe definir OPENAI_API_KEY como variable de entorno.")</span></p>
+<p class="p1"><span class="s1">client = OpenAI(api_key=openai_api_key)</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1">@app.route('/')</span></p>
+<p class="p1"><span class="s1">def index():</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>return render_template('index.html')</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1">@app.route('/api/extract')</span></p>
+<p class="p1"><span class="s1">def extract():</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>resp = requests.get('https://coosajo.com/')</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>soup = BeautifulSoup(resp.text, 'html.parser')</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>title = soup.title.string if soup.title else ''</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>desc_tag = soup.find('meta', attrs={'name': 'description'})</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>description = desc_tag['content'] if desc_tag else ''</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>return jsonify({'title': title, 'description': description})</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1">@app.route('/api/chat', methods=['POST'])</span></p>
+<p class="p1"><span class="s1">def chat():</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>data = request.json</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>message = data.get('message', '')</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>site_data = data.get('siteData', {})</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>system_prompt = (</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>f"Eres COBOT, el asistente de COOSAJO.\n"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>f"Título: {site_data.get('title','')}\n"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>f"Descripción: {site_data.get('description','')}"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>)</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>try:</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>response = client.chat.completions.create(</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>model='gpt-3.5-turbo', messages=[</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>{'role':'system','content':system_prompt},</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>{'role':'user','content':message}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>], temperature=0.7, max_tokens=200)</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>reply = response.choices[0].message.content.strip()</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>except OpenAIError as e:</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>reply = f"Error: {e}"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>return jsonify({'reply': reply})</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1">if __name__ == '__main__':</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>app.run(host='0.0.0.0', port=5000)</span></p>
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COOSAJO - Panel CMS de Pantallas en Red</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        .navbar { background-color: #172e59; border-bottom: 1px solid rgba(21, 142, 69, 0.4); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+        .brand-box { display: flex; align-items: center; gap: 16px; }
+        .logo-pill { background: white; padding: 6px 14px; border-radius: 12px; font-weight: 900; font-size: 20px; color: #172e59; }
+        .header-title { font-size: 18px; font-weight: 800; color: white; }
+        .header-sub { font-size: 12px; color: #34d399; font-weight: 600; }
+
+        .btn-green { background-color: #158e45; color: white; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; border: none; cursor: pointer; transition: background 0.2s; }
+        .btn-green:hover { background-color: #127a3b; }
+
+        .btn-blue { background-color: #2563eb; color: white; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 14px; border: none; cursor: pointer; }
+        .btn-blue:hover { background-color: #1d4ed8; }
+
+        .main-container { max-width: 1280px; width: 100%; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 1fr; gap: 24px; }
+        @media (min-width: 1024px) { .main-container { grid-template-columns: 2fr 1fr; } }
+
+        .card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); margin-bottom: 24px; }
+        .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid #334155; padding-bottom: 12px; }
+        .card-title { font-size: 16px; font-weight: 800; color: white; display: flex; align-items: center; gap: 10px; }
+
+        textarea { width: 100%; background: #020617; border: 1px solid #334155; color: white; padding: 14px; border-radius: 14px; font-size: 14px; resize: none; outline: none; margin-bottom: 12px; }
+        textarea:focus { border-color: #158e45; }
+
+        .dropzone { border: 2px dashed #334155; background: rgba(15, 23, 42, 0.6); border-radius: 16px; padding: 32px; text-align: center; cursor: pointer; position: relative; transition: border-color 0.2s; }
+        .dropzone:hover { border-color: #158e45; background: rgba(15, 23, 42, 0.9); }
+        .dropzone input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; color: #cbd5e1; margin-top: 12px; }
+        th { background: #020617; padding: 12px; color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 11px; }
+        td { padding: 12px; border-bottom: 1px solid #334155; }
+
+        .badge-video { background: rgba(168, 85, 247, 0.2); color: #c084fc; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 11px; }
+        .badge-image { background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 11px; }
+
+        .btn-delete { background: rgba(244, 63, 94, 0.2); color: #fb7185; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        .btn-delete:hover { background: rgba(244, 63, 94, 0.4); }
+
+        .preview-box { width: 100%; aspect-ratio: 9/16; background: #000; border-radius: 20px; border: 1px solid #334155; overflow: hidden; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
+        .preview-iframe { width: 100%; height: 100%; border: none; }
+
+        .screen-item { padding: 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+        .dot-green { width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981; }
+        .dot-red { width: 10px; height: 10px; border-radius: 50%; background: #f43f5e; }
+    </style>
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="brand-box">
+            <div class="logo-pill">COOSAJO R.L.</div>
+            <div>
+                <div class="header-title">Gestor de Señalización Digital</div>
+                <div class="header-sub">Panel de Control de Pantallas de Agencia</div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <a href="/player" target="_blank" class="btn-green">📺 Abrir Reproductor Web</a>
+            <span style="font-size: 12px; color: #34d399; font-weight: 700;">🟢 Servidor Activo</span>
+        </div>
+    </header>
+
+    <main class="main-container">
+
+        <div>
+            <!-- MARQUESINA -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📢 Marquesina Informativa en Vivo</div>
+                    <span id="savedMsg" style="display:none; font-size:12px; color:#34d399; font-weight:700;">✓ Actualizado</span>
+                </div>
+                <form id="tickerForm">
+                    <textarea id="tickerInput" rows="2" placeholder="Escribe el anuncio para las pantallas..."></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; color: #94a3b8;">Transmisión instantánea por red local</span>
+                        <button type="submit" class="btn-green">Actualizar Marquesina</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- COLA DE CONTENIDOS -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🎬 Cola Única de Contenidos a Pantalla Completa</div>
+                </div>
+
+                <div class="dropzone">
+                    <input type="file" id="fileInput" accept="video/*,image/*" />
+                    <div style="font-size: 16px; font-weight: 800; color: white;">Haz clic o arrastra un Video o Imagen aquí</div>
+                    <div style="font-size: 12px; color: #94a3b8; margin-top: 6px;">Soporta (.MP4, .WEBM, .PNG, .JPG, .WEBP)</div>
+                    <div style="margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span style="font-size: 12px; color: #94a3b8;">Duración si es imagen:</span>
+                        <input type="number" id="durInput" value="15" style="width: 60px; padding: 4px; border-radius: 6px; border: 1px solid #334155; background: #020617; color: #34d399; text-align: center; font-weight: 800;" />
+                        <span style="font-size: 12px; color: #94a3b8;">segundos</span>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 14px; font-weight: 800; margin-top: 20px; color: white;">Lista de Transmisión (Bucle Continuo)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Nombre del Archivo</th>
+                            <th>Modo</th>
+                            <th>Duración</th>
+                            <th style="text-align: right;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mediaTbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div>
+            <!-- VISTA PREVIA -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">👁️ Vista Previa (Pantalla 9:16)</div>
+                </div>
+                <div class="preview-box">
+                    <iframe src="/player" class="preview-iframe"></iframe>
+                </div>
+            </div>
+
+            <!-- MONITOREO -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🖥️ Monitoreo de Pantallas</div>
+                </div>
+                <div id="screensBox">
+                    <div style="text-align:center; font-size:12px; color:#94a3b8;">Buscando pantallas en red...</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        async function loadConfig() {
+            try {
+                const res = await fetch('/api/playlist');
+                const config = await res.json();
+                document.getElementById('tickerInput').value = config.ticker || '';
+                
+                const tbody = document.getElementById('mediaTbody');
+                tbody.innerHTML = '';
+
+                if (!config.media || config.media.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#64748b; padding:20px;">No hay archivos cargados. Arrastra un video o imagen arriba.</td></tr>`;
+                    return;
+                }
+
+                config.media.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><span class="${item.type === 'video' ? 'badge-video' : 'badge-image'}">${item.type.toUpperCase()}</span></td>
+                        <td style="font-weight:700; color:white;">${item.name}</td>
+                        <td style="color:#34d399; font-weight:700;">Pantalla Completa</td>
+                        <td>${item.type === 'image' ? (item.duration || 15) + ' seg' : 'Completo'}</td>
+                        <td style="text-align:right;">
+                            <button onclick="deleteItem('${item.id}')" class="btn-delete">Eliminar</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {}
+        }
+
+        document.getElementById('tickerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = document.getElementById('tickerInput').value.trim();
+            if (!text) return;
+            try {
+                await fetch('/api/ticker', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ticker: text })
+                });
+                const msg = document.getElementById('savedMsg');
+                msg.style.display = 'inline';
+                setTimeout(() => msg.style.display = 'none', 3000);
+                loadConfig();
+            } catch (e) {}
+        });
+
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const files = e.target.files;
+            if (files.length === 0) return;
+            const dur = document.getElementById('durInput').value || 15;
+            const fd = new FormData();
+            fd.append('file', files[0]);
+            fd.append('duration', dur);
+
+            try {
+                const res = await fetch('/api/upload', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) {
+                    loadConfig();
+                    e.target.value = '';
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (e) { alert("Error subiendo: " + e); }
+        });
+
+        async function deleteItem(id) {
+            if (!confirm("¿Deseas eliminar este archivo de la transmisión?")) return;
+            try {
+                await fetch(`/api/media/${id}`, { method: 'DELETE' });
+                loadConfig();
+            } catch (e) {}
+        }
+
+        async function loadScreens() {
+            try {
+                const res = await fetch('/api/screens');
+                const screens = await res.json();
+                const box = document.getElementById('screensBox');
+                box.innerHTML = '';
+
+                if (screens.length === 0) {
+                    box.innerHTML = `<div style="text-align:center; font-size:12px; color:#94a3b8;">Esperando conexión de pantallas en red...</div>`;
+                    return;
+                }
+
+                screens.forEach(s => {
+                    const isOnline = s.status === 'ONLINE';
+                    const div = document.createElement('div');
+                    div.className = 'screen-item';
+                    div.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div class="${isOnline ? 'dot-green' : 'dot-red'}"></div>
+                            <div>
+                                <div style="font-weight:800; font-size:12px; color:white;">${s.name} (${s.ip})</div>
+                                <div style="font-size:10px; color:#94a3b8;">Transmitiendo: ${s.current_playing}</div>
+                            </div>
+                        </div>
+                        <span style="font-size:10px; font-weight:800; color:${isOnline ? '#34d399' : '#fb7185'};">${s.status}</span>
+                    `;
+                    box.appendChild(div);
+                });
+            } catch (e) {}
+        }
+
+        loadConfig();
+        loadScreens();
+        setInterval(loadScreens, 5000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>COOSAJO TV 4K - Live Preview Player</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #050b14; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #ffffff; user-select: none; }
+        .media-viewport { position: absolute; inset: 0; z-index: 0; background-color: #000000; overflow: hidden; }
+        .media-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.8s ease-in-out; will-change: opacity; }
+        .media-layer.active { opacity: 1; z-index: 10; }
+        .header-bar { position: relative; z-index: 40; width: 100%; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to bottom, rgba(5, 11, 20, 0.9), rgba(5, 11, 20, 0.4), transparent); }
+        .brand-badge { background: rgba(255, 255, 255, 0.96); padding: 8px 16px; border-radius: 14px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6); border: 2px solid rgba(21, 142, 69, 0.4); display: flex; align-items: center; gap: 8px; }
+        .brand-title { font-weight: 900; font-size: 18px; color: #172e59; }
+        .brand-sub { font-size: 10px; font-weight: 800; color: #158e45; text-transform: uppercase; }
+        .widget-pill { display: flex; align-items: center; gap: 12px; background: rgba(15, 23, 42, 0.75); padding: 8px 16px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.15); }
+        .widget-temp { font-weight: 800; font-size: 15px; color: #34d399; }
+        .widget-divider { width: 1px; height: 16px; background-color: rgba(255, 255, 255, 0.2); }
+        .widget-clock { font-weight: 900; font-size: 18px; color: #ffffff; }
+        .footer-ticker { position: absolute; bottom: 0; left: 0; width: 100%; height: 56px; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(12px); border-top: 4px solid #158e45; display: flex; align-items: center; overflow: hidden; z-index: 40; }
+        .ticker-label { position: absolute; left: 0; top: 0; bottom: 0; z-index: 50; background: linear-gradient(135deg, #158e45, #0e6330); padding: 0 20px; display: flex; align-items: center; font-weight: 900; font-size: 15px; color: #ffffff; }
+        .marquee-track { white-space: nowrap; display: flex; align-items: center; gap: 64px; font-size: 17px; font-weight: 800; padding-left: 120px; color: #f8fafc; animation: scrollMarquee 25s linear infinite; }
+        @keyframes scrollMarquee { 0% { transform: translate3d(100vw, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
+    </style>
+</head>
+<body>
+    <div class="media-viewport">
+        <div id="slideA" class="media-layer active"></div>
+        <div id="slideB" class="media-layer"></div>
+
+        <video id="videoA" class="media-layer" muted playsinline></video>
+        <video id="videoB" class="media-layer" muted playsinline></video>
+    </div>
+
+    <div class="header-bar">
+        <div class="brand-badge">
+            <div>
+                <div class="brand-title">COOSAJO</div>
+                <div class="brand-sub">Señalización 4K</div>
+            </div>
+        </div>
+
+        <div class="widget-pill">
+            <div class="widget-temp">
+                <span id="tempVal">24°C</span>
+            </div>
+            <div class="widget-divider"></div>
+            <div class="widget-clock" id="clockVal">--:--</div>
+        </div>
+    </div>
+
+    <div class="footer-ticker">
+        <div class="ticker-label">INFO</div>
+        <div class="marquee-track">
+            <span id="tickerText">✨ ¡Ahorrar tiene premio! Conoce nuestras promociones de Magicuenta y créditos en agencias COOSAJO.</span>
+        </div>
+    </div>
+
+    <script>
+        let playlist = [];
+        let currentIndex = 0;
+        let activeBuffer = 'A';
+        let timerId = null;
+        let serverUrl = window.location.origin;
+
+        const slideA = document.getElementById('slideA');
+        const slideB = document.getElementById('slideB');
+        const videoA = document.getElementById('videoA');
+        const videoB = document.getElementById('videoB');
+        const tickerText = document.getElementById('tickerText');
+
+        function startClock() {
+            const update = () => {
+                const now = new Date();
+                document.getElementById('clockVal').textContent = now.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: true });
+            };
+            update();
+            setInterval(update, 1000);
+        }
+        startClock();
+
+        async function fetchPlaylist() {
+            try {
+                const res = await fetch(serverUrl + '/api/playlist', { cache: 'no-store' });
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                if (data.ticker) tickerText.textContent = data.ticker;
+                if (data.media && data.media.length > 0) playlist = data.media;
+            } catch (err) {}
+
+            if (slideA.style.opacity !== '1' && slideB.style.opacity !== '1' && videoA.style.opacity !== '1' && videoB.style.opacity !== '1') {
+                startPlayback();
+            }
+        }
+
+        function startPlayback() {
+            if (playlist.length === 0) return;
+            if (timerId) clearTimeout(timerId);
+
+            const item = playlist[currentIndex];
+            const targetSlide = activeBuffer === 'A' ? slideA : slideB;
+            const otherSlide = activeBuffer === 'A' ? slideB : slideA;
+
+            if (item.type === 'image') {
+                videoA.classList.remove('active');
+                videoB.classList.remove('active');
+
+                let imgUrl = item.url;
+                if (imgUrl.startsWith('/')) imgUrl = serverUrl + imgUrl;
+
+                targetSlide.innerHTML = `<img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover;" />`;
+                targetSlide.classList.add('active');
+                otherSlide.classList.remove('active');
+
+                const dur = (item.duration || 15) * 1000;
+                timerId = setTimeout(advanceNext, dur);
+            } else if (item.type === 'video') {
+                slideA.classList.remove('active');
+                slideB.classList.remove('active');
+
+                let vidUrl = item.url;
+                if (vidUrl.startsWith('/')) vidUrl = serverUrl + vidUrl;
+
+                const targetVideo = activeBuffer === 'A' ? videoA : videoB;
+                const otherVideo = activeBuffer === 'A' ? videoB : videoA;
+
+                targetVideo.src = vidUrl;
+                targetVideo.play().then(() => {
+                    targetVideo.classList.add('active');
+                    otherVideo.classList.remove('active');
+                }).catch(err => advanceNext());
+
+                targetVideo.onended = () => advanceNext();
+            }
+        }
+
+        function advanceNext() {
+            if (playlist.length === 0) return;
+            currentIndex = (currentIndex + 1) % playlist.length;
+            activeBuffer = activeBuffer === 'A' ? 'B' : 'A';
+            startPlayback();
+        }
+
+        fetchPlaylist();
+        setInterval(fetchPlaylist, 5000);
+    </script>
+</body>
+</html>

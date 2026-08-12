@@ -1,0 +1,117 @@
+{
+  "ticker": "🚀 PROMO EN RED: Actualización probada desde el Servidor CMS COOSAJO en tiempo real!",
+  "weather": {
+    "city": "Esquipulas",
+    "temp": "24°C"
+  },
+  "update_interval": 10,
+  "media": [
+    {
+      "id": "demo-banner-1",
+      "type": "image",
+      "name": "Banner Institucional 1",
+      "url": "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=431&h=767&q=80",
+      "duration": 15,
+      "target": "banner"
+    },
+    {
+      "id": "demo-banner-2",
+      "type": "image",
+      "name": "Banner Institucional 2",
+      "url": "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&w=431&h=767&q=80",
+      "duration": 15,
+      "target": "banner"
+    },
+    {
+      "id": "media-1786571345",
+      "type": "image",
+      "name": "LATERAL 5.png",
+      "url": "/uploads/LATERAL_5_1786571345.png",
+      "filename": "LATERAL_5_1786571345.png",
+      "duration": 15,
+      "target": "main"
+    },
+    {
+      "id": "media-1786571360",
+      "type": "image",
+      "name": "LATERAL 8.png",
+      "url": "/uploads/LATERAL_8_1786571360.png",
+      "filename": "LATERAL_8_1786571360.png",
+      "duration": 15,
+      "target": "main"
+    },
+    {
+      "id": "media-1786571362",
+      "type": "image",
+      "name": "LATERAL 7.png",
+      "url": "/uploads/LATERAL_7_1786571362.png",
+      "filename": "LATERAL_7_1786571362.png",
+      "duration": 15,
+      "target": "main"
+    },
+    {
+      "id": "media-1786571364",
+      "type": "image",
+      "name": "LATERAL 6.png",
+      "url": "/uploads/LATERAL_6_1786571364.png",
+      "filename": "LATERAL_6_1786571364.png",
+      "duration": 15,
+      "target": "main"
+    },
+    {
+      "id": "media-1786571366",
+      "type": "image",
+      "name": "LATERAL 4.png",
+      "url": "/uploads/LATERAL_4_1786571366.png",
+      "filename": "LATERAL_4_1786571366.png",
+      "duration": 15,
+      "target": "main"
+    },
+    {
+      "id": "media-1786571368",
+      "type": "image",
+      "name": "LATERAL 3.png",
+      "url": "/uploads/LATERAL_3_1786571368.png",
+      "filename": "LATERAL_3_1786571368.png",
+      "duration": 15,
+      "target": "main"
+    },
+    {
+      "id": "media-1786571370",
+      "type": "image",
+      "name": "LATERAL 2.png",
+      "url": "/uploads/LATERAL_2_1786571370.png",
+      "filename": "LATERAL_2_1786571370.png",
+      "duration": 15,
+      "target": "main"
+    },
+    {
+      "id": "media-1786571371",
+      "type": "image",
+      "name": "LATERALE 1.png",
+      "url": "/uploads/LATERALE_1_1786571371.png",
+      "filename": "LATERALE_1_1786571371.png",
+      "duration": 15,
+      "target": "main"
+    },
+    {
+      "id": "media-1786571373",
+      "type": "image",
+      "name": "META.png",
+      "url": "/uploads/META_1786571373.png",
+      "filename": "META_1786571373.png",
+      "duration": 15,
+      "target": "main"
+    },
+    {
+      "id": "media-1786571375",
+      "type": "image",
+      "name": "MAGICUENTA.png",
+      "url": "/uploads/MAGICUENTA_1786571375.png",
+      "filename": "MAGICUENTA_1786571375.png",
+      "duration": 15,
+      "target": "main"
+    }
+  ],
+  "last_updated": 1786573289.801812
+}
