@@ -1,0 +1,17 @@
+{
+  "name": "web-obs-rtmp-bridge",
+  "version": "1.0.0",
+  "description": "Puente entre WebSockets y FFmpeg para streaming a RTMP",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "ws": "^8.21.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pantalla Agencia COOSAJO (Híbrido Nube)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; overflow: hidden; background-color: #f1f5f9; margin: 0; cursor: none; }
+        .bg-abstract { background-image: url('fondo_pit.jpg'); background-size: cover; background-position: center; opacity: 1.0; position: absolute; inset: 0; z-index: 0; }
+        
+        .video-frame {
+            border-radius: 1.5rem;
+            background: #ffffff;
+            border: 4px solid #ffffff;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        #sidebar { transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+        #sidebar.hidden-sidebar { width: 0; opacity: 0; margin-right: -1.25rem; transform: translateX(-40px); }
+        #mainFooter.hidden-footer { height: 0; border-width: 0; opacity: 0; margin: 0; padding: 0; }
+
+        /* Contenedor WebRTC Pantalla Completa Absoluta */
+        #liveFullscreenContainer {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: black;
+            display: none;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+        #liveIframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: black;
+        }
+
+        /* Marquesina (Ticker) */
+        @keyframes scroll-left { 0% { transform: translateX(100vw); } 100% { transform: translateX(-100%); } }
+        .animate-marquee { animation: scroll-left 40s linear infinite; will-change: transform; }
+    </style>
+</head>
+<body class="w-full h-screen flex flex-col relative bg-[#f1f5f9]">
+
+    <!-- FONDO -->
+    <div class="bg-abstract"></div>
+    
+    <!-- HEADER MÁS PEQUEÑO Y ESTÉTICO -->
+    <header id="mainHeader" class="relative z-50 h-[70px] bg-white border-b-[4px] border-[#158e45] flex items-center justify-between px-6 shadow-md transition-opacity duration-1000 shrink-0">
+        <div class="flex items-center gap-4">
+            <img src="LOGO COOSAJO SIN ESLOGAN.png" alt="COOSAJO" class="h-10 object-contain" onerror="this.style.display='none'">
+            
+            <!-- Redes Sociales -->
+            <div class="flex gap-6 items-center border-l-2 border-slate-200 pl-6">
+                <div class="flex items-center gap-2.5"><img src="LOGO FACEBOOK.png" class="w-6 h-6 object-contain" onerror="this.style.display='none'"/><span class="font-black text-[15px] text-[#172e59]">COOSAJO</span></div>
+                <div class="flex items-center gap-2.5"><img src="LOGO INSTA.png" class="w-6 h-6 object-contain" onerror="this.style.display='none'"/><span class="font-black text-[15px] text-[#172e59]">coosajoesmicoope</span></div>
+                <div class="flex items-center gap-2.5"><i data-lucide="globe" class="w-5 h-5 text-[#158e45]"></i><span class="font-black text-[15px] text-[#172e59]">www.coosajo.com</span></div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <!-- Temperatura -->
+            <div class="flex items-center gap-2 border-l-[3px] border-slate-100 pl-6">
+                <i id="weatherIcon" data-lucide="thermometer" class="w-7 h-7 text-[#158e45]"></i>
+                <div>
+                    <div id="tempValue" class="font-black text-2xl text-[#172e59] leading-none tracking-tighter">--°C</div>
+                    <div class="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Esquipulas</div>
+                </div>
+            </div>
+
+            <!-- Reloj -->
+            <div class="text-right border-l-[3px] border-slate-100 pl-6">
+                <div id="clockTime" class="font-black text-3xl text-[#172e59] leading-none tracking-tighter">--:--</div>
+                <div id="clockDate" class="text-[8px] text-[#158e45] font-black uppercase mt-0.5 tracking-widest">Cargando...</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main id="mainContent" class="relative z-10 flex-1 flex items-center justify-center gap-6 p-8 min-h-0 transition-opacity duration-1000">
+        
+        <!-- SIDEBAR PARA BANNERS (IMÁGENES) -->
+        <div id="sidebar" class="relative overflow-hidden flex-shrink-0 video-frame aspect-[9/13] w-[28%] max-h-full">
+            <img id="mainBanner" src="" class="absolute inset-0 w-full h-full object-contain z-10 opacity-0 transition-opacity duration-1000" />
+            <div id="emptyBannerText" class="absolute inset-0 flex items-center justify-center text-slate-400 font-bold uppercase tracking-widest text-xs opacity-50 z-0">Sin Banners</div>
+        </div>
+
+        <div class="flex-1 relative overflow-hidden flex items-center justify-center video-frame aspect-video max-h-full">
+            <video id="mainVideo2" class="absolute inset-0 w-full h-full object-contain z-10 opacity-0" playsinline webkit-playsinline></video>
+            <video id="mainVideo" class="absolute inset-0 w-full h-full object-contain z-10 opacity-0" playsinline webkit-playsinline></video>
+            
+            <div id="emptyVideoText" class="absolute inset-0 flex flex-col items-center justify-center bg-transparent z-0">
+                <img src="LOGO COOSAJO SIN ESLOGAN.png" class="h-24 opacity-20 mb-4 brightness-0 invert" onerror="this.style.display='none'">
+                <p class="text-slate-500 font-bold uppercase tracking-widest text-xs opacity-30">Lista de Videos Vacía</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- BARRA INFERIOR DE INFORMACIÓN (TICKER) -->
+    <footer id="mainFooter" class="h-20 bg-[#172e59] flex items-center relative overflow-hidden shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.1)] border-t-[4px] border-[#158e45] z-50 transition-all duration-1000 hidden-footer">
+        <div id="marqueeContainer" class="absolute whitespace-nowrap animate-marquee flex items-center gap-32">
+            <!-- Textos dinámicos desde la nube -->
+        </div>
+    </footer>
+
+    <!-- MODO EN VIVO (PANTALLA COMPLETA TOTAL) -->
+    <div id="liveFullscreenContainer">
+        <iframe id="liveIframe" src="http://10.60.59.15:8888/Mundial" allow="autoplay; fullscreen"></iframe>
+        <div id="liveLoadingFullscreen" class="absolute inset-0 flex flex-col items-center justify-center bg-black z-10">
+            <h2 id="liveLoadingText" class="text-4xl font-black uppercase tracking-[0.4em] text-slate-300 mb-8 italic animate-pulse">Conectando a Mesa Técnica...</h2>
+        </div>
+    </div>
+
+    <!-- PANEL DE CONFIGURACIÓN OCULTO -->
+    <div id="configPanel" class="fixed inset-0 z-[100000] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl shadow-2xl p-10 max-w-lg w-full transform scale-95 transition-transform duration-300" id="configPanelInner">
+            <h2 class="text-3xl font-black text-[#172e59] mb-2 uppercase tracking-tighter flex items-center gap-3"><i data-lucide="settings" class="text-[#158e45]"></i> Configuración Local</h2>
+            <p class="text-slate-500 mb-8 font-medium">Asigna un nombre a esta pantalla para identificarla en la Mesa Técnica.</p>
+            
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nombre de la Agencia / TV</label>
+                <input type="text" id="configAgencyName" class="w-full text-xl font-bold text-[#172e59] border-2 border-slate-200 rounded-xl px-4 py-3 focus:border-[#158e45] focus:outline-none transition-colors" placeholder="Ej. Agencia Centro">
+            </div>
+
+            <div class="mb-8">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ID y Red</label>
+                <div class="bg-slate-100 rounded-xl p-4 font-mono text-sm text-slate-600 flex flex-col gap-1">
+                    <div><strong class="text-slate-800">ID:</strong> <span id="configIdDisplay"></span></div>
+                    <div><strong class="text-slate-800">IP:</strong> <span id="configIpDisplay"></span></div>
+                </div>
+            </div>
+            
+            <div class="flex gap-4">
+                <button id="btnConfigSave" class="flex-1 bg-[#158e45] text-white font-black uppercase tracking-widest py-4 rounded-xl hover:bg-green-700 transition-colors">Guardar</button>
+                <button id="btnConfigCancel" class="flex-1 bg-slate-200 text-slate-600 font-bold uppercase tracking-widest py-4 rounded-xl hover:bg-slate-300 transition-colors">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+        lucide.createIcons();
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGF-do5_cykTa9rB5NK-7ie4x4rpoYc0g",
+            authDomain: "coosajo-signage.firebaseapp.com",
+            projectId: "coosajo-signage",
+            storageBucket: "coosajo-signage.firebasestorage.app",
+            messagingSenderId: "941731323301",
+            appId: "1:941731323301:web:a786e9fe7cbec6c66b9c4c"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        signInAnonymously(auth).catch(err => console.error("Error Auth:", err));
+
+        const mainHeader = document.getElementById('mainHeader');
+        const mainContent = document.getElementById('mainContent');
+        const mainFooter = document.getElementById('mainFooter');
+        const mainBanner = document.getElementById('mainBanner');
+        const mainVideo = document.getElementById('mainVideo');
+        
+        const liveFullscreenContainer = document.getElementById('liveFullscreenContainer');
+        const liveIframe = document.getElementById('liveIframe');
+        
+        let isLiveActive = false;
+        const appLoadTime = Date.now();
+        
+        let agencyId = localStorage.getItem('agencyId');
+        if (!agencyId) {
+            agencyId = 'Agencia-' + Math.floor(Math.random() * 100000);
+            localStorage.setItem('agencyId', agencyId);
+        }
+
+        let localIP = "Cargando...";
+        if (window.electronAPI && window.electronAPI.getLocalIP) {
+            window.electronAPI.getLocalIP().then(ip => localIP = ip).catch(() => {});
+        } else {
+             fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => localIP = d.ip).catch(() => localIP = "Desconocida");
+        }
+        
+        let agencyName = "Sin Bautizar";
+
+        async function sendHeartbeat() {
+            try {
+                const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+                let currentStatus = "Anuncios";
+                if (isLiveActive) currentStatus = "En Vivo";
+                if (!liveLoadingFullscreen.classList.contains('hidden') && liveFullscreenContainer.style.display !== 'none') {
+                    currentStatus = "Intentando Conectar a Mesa";
+                }
+                
+                await setDoc(doc(db, "artifacts", "broadcast-system", "agencies", agencyId), {
+                    lastPing: Date.now(),
+                    status: currentStatus,
+                    version: "1.0.RTMP",
+                    peerConnected: true,
+                    localIP: localIP
+                }, { merge: true });
+            } catch(e) { console.error("Heartbeat fail", e); }
+        }
+        setInterval(sendHeartbeat, 7200000); // Latido cada 2 horas
+        setTimeout(sendHeartbeat, 3000);
+
+        // ESCUCHAR COMANDOS ESPECÍFICOS PARA ESTA AGENCIA Y NOMBRE
+        let lastAgencyRestart = 0;
+        let localImagesRaw = [];
+        let localVideosRaw = [];
+
+        onSnapshot(doc(db, "artifacts", "broadcast-system", "agencies", agencyId), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.name) agencyName = data.name;
+                
+                if (data.forceRestart && data.forceRestart > lastAgencyRestart) {
+                    if (lastAgencyRestart === 0) {
+                        lastAgencyRestart = data.forceRestart;
+                    } else {
+                        console.log("REINICIO INDIVIDUAL SOLICITADO DESDE MESA TÉCNICA!");
+                        if (window.electronAPI) window.electronAPI.restartApp();
+                        else window.location.reload();
+                    }
+                }
+            }
+        });
+        
+        // ESCUCHAR CONTENIDO LOCAL EXCLUSIVO
+        onSnapshot(collection(db, `artifacts/broadcast-system/agencies/${agencyId}/media`), async (snapshot) => {
+            let rawMedia = [];
+            snapshot.forEach(doc => rawMedia.push({ id: doc.id, ...doc.data() }));
+            
+            let syncedMedia = [];
+            if (window.electronAPI) {
+                try { syncedMedia = await window.electronAPI.syncMedia(rawMedia); }
+                catch(e) { syncedMedia = rawMedia; }
+            } else { syncedMedia = rawMedia; }
+
+            localImagesRaw = [];
+            localVideosRaw = [];
+            syncedMedia.forEach(data => {
+                if (data.type.startsWith('video')) localVideosRaw.push(data);
+                else localImagesRaw.push(data);
+            });
+            localImagesRaw.sort((a, b) => a.timestamp - b.timestamp);
+            localVideosRaw.sort((a, b) => a.timestamp - b.timestamp);
+            rebuildHybridPlaylists();
+        });
+
+        let imagesPlaylist = [];
+        let videosPlaylist = [];
+        let generalImagesRaw = [];
+        let generalVideosRaw = [];
+        
+        function rebuildHybridPlaylists() {
+            // Mezclador Zipper para Videos
+            let newVideos = [];
+            let i = 0, j = 0;
+            while(i < generalVideosRaw.length || j < localVideosRaw.length) {
+                if(i < generalVideosRaw.length) { newVideos.push(generalVideosRaw[i]); i++; }
+                if(j < localVideosRaw.length) { newVideos.push(localVideosRaw[j]); j++; }
+            }
+            videosPlaylist = newVideos;
+
+            // Mezclador Zipper para Banners
+            let newImages = [];
+            i = 0; j = 0;
+            while(i < generalImagesRaw.length || j < localImagesRaw.length) {
+                if(i < generalImagesRaw.length) { newImages.push(generalImagesRaw[i]); i++; }
+                if(j < localImagesRaw.length) { newImages.push(localImagesRaw[j]); j++; }
+            }
+            imagesPlaylist = newImages;
+
+            // Si es la primera vez que armamos listas, arrancar reproductores
+            if(!isLiveActive) {
+                if(!isImageLooping && imagesPlaylist.length > 0) {
+                    isImageLooping = true; currentImageIndex = 0; playNextImage();
+                } else if (imagesPlaylist.length === 0) {
+                    isImageLooping = false; mainBanner.style.opacity = '0'; clearTimeout(imageTimer);
+                }
+
+                if(!isVideoLooping && videosPlaylist.length > 0) {
+                    isVideoLooping = true; currentVideoIndex = 0; playNextVideo();
+                } else if (videosPlaylist.length === 0) {
+                    isVideoLooping = false; mainVideo.style.opacity = '0'; mainVideo.pause();
+                    if(typeof mainVideo2 !== 'undefined') { mainVideo2.style.opacity = '0'; mainVideo2.pause(); }
+                }
+            }
+        }
+        let currentImageIndex = 0;
+        let currentVideoIndex = 0;
+        let imageTimer = null;
+        let isVideoLooping = false;
+        let isImageLooping = false;
+
+        function startHybridListeners() {
+            onSnapshot(doc(db, 'artifacts', 'broadcast-system', 'platform', 'state'), (docSnap) => {
+                if (!docSnap.exists()) return;
+                const state = docSnap.data();
+                
+                if (state.marqueeSpeed) {
+                    const marquee = document.getElementById('marqueeContainer');
+                    if (marquee) marquee.style.animationDuration = `${state.marqueeSpeed}s`;
+                }
+                
+                if (state.prompterCommand && window.electronAPI) {
+                    if (!window.lastPrompterTimestamp || state.prompterCommand.timestamp > window.lastPrompterTimestamp) {
+                        window.lastPrompterTimestamp = state.prompterCommand.timestamp;
+                        if (!isFirstStateSnapshot) {
+                            window.electronAPI.controlPrompter(state.prompterCommand.action);
+                        }
+                    }
+                }
+                
+                isFirstStateSnapshot = false;
+                
+                if (state.muteVideos !== undefined) {
+                    window.globalMuteVideos = state.muteVideos;
+                    if (mainVideo) mainVideo.muted = window.globalMuteVideos;
+                    if (mainVideo2) mainVideo2.muted = window.globalMuteVideos;
+                }
+                
+                if (state.isLive) {
+                    isLiveActive = true;
+                    
+                    mainVideo.pause();
+                    clearTimeout(imageTimer);
+                    
+                    // Ocultar TODO
+                    mainHeader.style.opacity = '0';
+                    mainContent.style.opacity = '0';
+                    mainFooter.style.opacity = '0';
+
+                    liveFullscreenContainer.style.display = 'block';
+                    setTimeout(() => liveFullscreenContainer.style.opacity = '1', 50);
+                    
+                    // Aseguramos que el iframe esté cargado con la URL dinámica
+                    const targetPlaybackUrl = state.playbackUrl || 'http://10.60.59.15:8888/Mundial';
+                    if (liveIframe.src !== targetPlaybackUrl) {
+                        liveIframe.src = targetPlaybackUrl;
+                    }
+
+                    liveLoadingFullscreen.classList.add('hidden');
+                } else {
+                    if(isLiveActive) {
+                        isLiveActive = false;
+                        
+                        // Parar el iframe para ahorrar ancho de banda de PIT
+                        liveIframe.src = 'about:blank';
+                        
+                        liveFullscreenContainer.style.opacity = '0';
+                        setTimeout(() => liveFullscreenContainer.style.display = 'none', 1000);
+                        
+                        mainHeader.style.opacity = '1';
+                        mainContent.style.opacity = '1';
+                        mainFooter.style.opacity = '1';
+                        
+                        if(videosPlaylist.length > 0) { isVideoLooping = true; playNextVideo(); }
+                        if(imagesPlaylist.length > 0) { isImageLooping = true; playNextImage(); }
+                    }
+                }
+            });
+
+            onSnapshot(collection(db, "signage_media"), async (snapshot) => {
+                let rawMedia = [];
+                snapshot.forEach((doc) => {
+                    rawMedia.push({ id: doc.id, ...doc.data() });
+                });
+                
+                if (!isLiveActive && rawMedia.length > 0) {
+                    liveLoadingFullscreen.classList.remove('hidden');
+                    liveLoadingText.innerHTML = "Sincronizando Videos Nuevos (Offline Cache)...";
+                    liveLoadingText.className = "text-2xl font-black uppercase tracking-widest text-blue-400 mb-8 animate-pulse";
+                    liveFullscreenContainer.classList.remove('hidden');
+                    liveFullscreenContainer.style.opacity = '1';
+                }
+
+                let syncedMedia = [];
+                try {
+                    syncedMedia = await window.electronAPI.syncMedia(rawMedia);
+                } catch(e) {
+                    syncedMedia = rawMedia;
+                }
+
+                generalImagesRaw = [];
+                generalVideosRaw = [];
+                
+                syncedMedia.forEach((data) => {
+                    if(data.type.startsWith('video')) generalVideosRaw.push(data);
+                    else generalImagesRaw.push(data);
+                });
+                
+                generalImagesRaw.sort((a, b) => a.timestamp - b.timestamp);
+                generalVideosRaw.sort((a, b) => a.timestamp - b.timestamp);
+                
+                rebuildHybridPlaylists();
+                
+                if (!isLiveActive) {
+                    liveFullscreenContainer.style.opacity = '0';
+                    setTimeout(() => liveFullscreenContainer.classList.add('hidden'), 500);
+                }
+            });
+
+            // ESCUCHADOR DE TEXTOS (TICKER)
+            onSnapshot(collection(db, "signage_ticker"), (snapshot) => {
+                let texts = [];
+                snapshot.forEach(doc => texts.push(doc.data()));
+                texts.sort((a, b) => a.timestamp - b.timestamp);
+
+                const marquee = document.getElementById('marqueeContainer');
+                if (texts.length === 0) {
+                    mainFooter.classList.add('hidden-footer');
+                    marquee.innerHTML = '';
+                } else {
+                    mainFooter.classList.remove('hidden-footer');
+                    
+                    // Triplicamos los textos para asegurar que el scroll infinito no deje huecos vacíos
+                    const renderTexts = [...texts, ...texts, ...texts];
+                    let html = '';
+                    renderTexts.forEach(t => {
+                        const isHighlight = t.icon === 'zap' || t.icon === 'star' || t.icon === 'megaphone';
+                        const textColor = isHighlight ? 'text-yellow-400' : 'text-white';
+                        const iconColor = isHighlight ? 'text-yellow-400' : 'text-[#158e45]';
+                        const textStr = (t.text || '').toUpperCase();
+                        
+                        html += `
+                            <span class="${textColor} text-3xl font-black tracking-widest flex items-center gap-4">
+                                <i data-lucide="${t.icon || 'info'}" class="w-8 h-8 ${iconColor}"></i>
+                                ${textStr}
+                            </span>
+                        `;
+                    });
+                    marquee.innerHTML = html;
+                    lucide.createIcons();
+                }
+            });
+
+            // ESCUCHADOR DE COMANDOS REMOTOS (Actualización / Reinicio)
+            onSnapshot(doc(db, "artifacts", "broadcast-system", "commands", "update"), (docSnap) => {
+                if (!docSnap.exists()) return;
+                const cmd = docSnap.data();
+                // Solo reaccionar a comandos lanzados DESPUÉS de haber cargado la app
+                if (cmd.action === 'force_restart' && cmd.timestamp > appLoadTime) {
+                    liveLoadingFullscreen.classList.remove('hidden');
+                    liveLoadingText.innerHTML = "ACTUALIZANDO...";
+                    liveFullscreenContainer.style.display = 'block';
+                    liveFullscreenContainer.style.opacity = '1';
+                    
+                    setTimeout(() => {
+                        if (window.electronAPI) window.electronAPI.restartApp();
+                        else window.location.reload();
+                    }, 2000);
+                }
+            });
+        }
+
+        let activeVideoPlayer = 1;
+
+        function playNextVideo() {
+            const v1 = document.getElementById('mainVideo');
+            const v2 = document.getElementById('mainVideo2');
+
+            if (isLiveActive || videosPlaylist.length === 0) {
+                isVideoLooping = false;
+                v1.style.opacity = '0';
+                v2.style.opacity = '0';
+                v1.pause();
+                v2.pause();
+                return;
+            }
+            isVideoLooping = true;
+            
+            if (currentVideoIndex >= videosPlaylist.length) currentVideoIndex = 0;
+            
+            const file = videosPlaylist[currentVideoIndex];
+            const nextFile = videosPlaylist[(currentVideoIndex + 1) % videosPlaylist.length];
+
+            const activeVid = activeVideoPlayer === 1 ? v1 : v2;
+            const inactiveVid = activeVideoPlayer === 1 ? v2 : v1;
+
+            // Si la URL cargada no es exactamente la que toca (por ser el primer video o cambio de lista)
+            if (activeVid.dataset.loadedUrl !== file.url) {
+                activeVid.src = file.url;
+                activeVid.dataset.loadedUrl = file.url;
+                activeVid.load();
+            }
+
+            activeVid.style.opacity = "1";
+            activeVid.currentTime = 0;
+            activeVid.muted = window.globalMuteVideos || false;
+            activeVid.volume = 1.0;
+            
+            // Ocultar el inactivo
+            inactiveVid.style.opacity = "0";
+            inactiveVid.pause();
+            
+            // Pre-cargar el SIGUIENTE video en el inactivo silenciosamente (Double Buffering)
+            if (videosPlaylist.length > 1) {
+                inactiveVid.src = nextFile.url;
+                inactiveVid.dataset.loadedUrl = nextFile.url;
+                inactiveVid.preload = "auto";
+                inactiveVid.load(); // Forzar carga en memoria (sin decodificar en pantalla)
+            }
+
+            activeVid.play().catch(() => {
+                activeVid.muted = true;
+                activeVid.play();
+            });
+
+            // Limpiar eventos del inactivo para que no disparen basura
+            inactiveVid.onerror = null;
+            inactiveVid.onended = null;
+
+            activeVid.onerror = () => {
+                console.error("Error al cargar video:", file.url);
+                setTimeout(() => {
+                    activeVideoPlayer = activeVideoPlayer === 1 ? 2 : 1;
+                    currentVideoIndex = (currentVideoIndex + 1) % videosPlaylist.length;
+                    playNextVideo();
+                }, 2000);
+            };
+
+            activeVid.onended = () => {
+                // Intercambiar reproductor
+                activeVideoPlayer = activeVideoPlayer === 1 ? 2 : 1;
+                currentVideoIndex = (currentVideoIndex + 1) % videosPlaylist.length;
+                playNextVideo();
+            };
+        }
+
+        function playNextImage() {
+            if (isLiveActive || imagesPlaylist.length === 0) {
+                isImageLooping = false;
+                mainBanner.style.opacity = '0';
+                return;
+            }
+            isImageLooping = true;
+            if (currentImageIndex >= imagesPlaylist.length) currentImageIndex = 0;
+            
+            const file = imagesPlaylist[currentImageIndex];
+            mainBanner.src = file.url;
+            mainBanner.style.opacity = "1";
+            
+            const waitTime = (file.durationSecs || 10) * 1000;
+            
+            imageTimer = setTimeout(() => {
+                currentImageIndex = (currentImageIndex + 1) % imagesPlaylist.length;
+                playNextImage();
+            }, waitTime);
+        }
+
+
+
+        // ==========================================
+        // RELOJ Y CLIMA (Open-Meteo)
+        // ==========================================
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // la hora '0' debe ser '12'
+            const timeString = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+            document.getElementById('clockTime').textContent = timeString;
+            document.getElementById('clockDate').textContent = now.toLocaleDateString('es-GT', {weekday:'long', day:'numeric', month:'long'}).toUpperCase();
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        async function fetchWeather() {
+            try {
+                // Coordenadas de Esquipulas, Guatemala
+                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=14.5667&longitude=-89.35&current_weather=true');
+                const data = await res.json();
+                const temp = Math.round(data.current_weather.temperature);
+                const isDay = data.current_weather.is_day;
+                
+                document.getElementById('tempValue').textContent = `${temp}°C`;
+                
+                const icon = document.getElementById('weatherIcon');
+                if (temp > 28) {
+                    icon.setAttribute('data-lucide', isDay ? 'sun' : 'moon');
+                    icon.className = 'w-8 h-8 text-orange-500';
+                } else if (temp < 15) {
+                    icon.setAttribute('data-lucide', 'cloud-rain');
+                    icon.className = 'w-8 h-8 text-blue-500';
+                } else {
+                    icon.setAttribute('data-lucide', isDay ? 'cloud-sun' : 'cloud-moon');
+                    icon.className = 'w-8 h-8 text-[#158e45]';
+                }
+                lucide.createIcons();
+            } catch (e) {
+                console.error("Error obteniendo clima:", e);
+            }
+        }
+        fetchWeather();
+        setInterval(fetchWeather, 600000); // Actualizar clima cada 10 minutos
+
+        // ==========================================
+        // PANEL DE CONFIGURACIÓN
+        // ==========================================
+        const configPanel = document.getElementById('configPanel');
+        const configPanelInner = document.getElementById('configPanelInner');
+        const configAgencyName = document.getElementById('configAgencyName');
+        const configIdDisplay = document.getElementById('configIdDisplay');
+        const configIpDisplay = document.getElementById('configIpDisplay');
+
+        function openConfig() {
+            configIdDisplay.textContent = agencyId;
+            configIpDisplay.textContent = localIP;
+            configAgencyName.value = agencyName !== "Sin Bautizar" ? agencyName : "";
+            
+            configPanel.classList.remove('hidden');
+            // Timeout para transición
+            setTimeout(() => {
+                configPanel.style.opacity = '1';
+                configPanelInner.classList.remove('scale-95');
+                configPanelInner.classList.add('scale-100');
+                configAgencyName.focus();
+            }, 10);
+        }
+
+        function closeConfig() {
+            configPanel.style.opacity = '0';
+            configPanelInner.classList.remove('scale-100');
+            configPanelInner.classList.add('scale-95');
+            setTimeout(() => configPanel.classList.add('hidden'), 300);
+        }
+
+        document.getElementById('btnConfigCancel').addEventListener('click', closeConfig);
+        document.getElementById('btnConfigSave').addEventListener('click', async () => {
+            const newName = configAgencyName.value.trim();
+            if (newName) {
+                const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+                await setDoc(doc(db, "artifacts", "broadcast-system", "agencies", agencyId), {
+                    name: newName
+                }, { merge: true });
+                agencyName = newName;
+            }
+            closeConfig();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'c') {
+                if (configPanel.classList.contains('hidden')) openConfig();
+                else closeConfig();
+            }
+            if (e.key === 'Escape' && !configPanel.classList.contains('hidden')) {
+                closeConfig();
+            }
+        });
+
+        // 3 clics rápidos en la esquina superior izquierda
+        let clickCount = 0;
+        let clickTimer;
+        document.addEventListener('click', (e) => {
+            if (e.clientX < 100 && e.clientY < 100) {
+                clickCount++;
+                clearTimeout(clickTimer);
+                if (clickCount >= 3) {
+                    openConfig();
+                    clickCount = 0;
+                } else {
+                    clickTimer = setTimeout(() => clickCount = 0, 1000);
+                }
+            }
+        });
+        startHybridListeners(); // Iniciar inmediatamente sin esperar a PeerJS
+
+    </script>
+</body>
+</html>

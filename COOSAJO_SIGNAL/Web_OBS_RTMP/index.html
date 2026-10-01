@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS Web a RTMP</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; background: #1a1a1a; color: white; margin: 0; padding: 20px; }
+        video { border: 2px solid #333; border-radius: 8px; max-width: 80%; background: #000; margin-bottom: 20px; }
+        button { background: #E50914; color: white; border: none; padding: 15px 30px; font-size: 18px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #f40612; transform: scale(1.05); }
+        button:disabled { background: #555; cursor: not-allowed; transform: none; }
+        .status { margin-top: 10px; font-size: 14px; color: #aaa; }
+        #stopBtn { background: #555; display: none; }
+        #stopBtn:hover { background: #777; }
+    </style>
+</head>
+<body>
+
+    <h1>🎙️ Web OBS (En vivo a RTMP)</h1>
+    <p>Captura tu pantalla y el puente Node.js lo enviará automáticamente al servidor de PIT.</p>
+    
+    <video id="preview" autoplay muted></video><br>
+    
+    <button id="startBtn">🔴 Empezar Transmisión a Servidor</button>
+    <button id="stopBtn">⏹️ Detener Transmisión</button>
+
+    <div class="status" id="statusText">Esperando para iniciar...</div>
+
+    <script>
+        const preview = document.getElementById('preview');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusText = document.getElementById('statusText');
+
+        let mediaRecorder;
+        let ws;
+        let vStream;
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                // 1. Pedir captura de pantalla (con audio si es posible)
+                vStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { width: 1920, height: 1080, frameRate: 30 },
+                    audio: true
+                });
+
+                // Truco para evitar lag (priorizar fluidez sobre calidad extrema estática)
+                vStream.getVideoTracks().forEach(t => t.contentHint = 'motion');
+
+                preview.srcObject = vStream;
+
+                // 2. Conectar al puente por WebSockets
+                let wsHost = window.location.host;
+                if (!wsHost) wsHost = 'localhost:8081'; // Fallback si lo abren con doble clic
+                ws = new WebSocket('ws://' + wsHost);
+
+                ws.onopen = () => {
+                    statusText.innerText = "Conectado al Puente Node.js. Procesando video...";
+                    statusText.style.color = "#0f0";
+                    startBtn.style.display = "none";
+                    stopBtn.style.display = "inline-block";
+
+                    // Avisarle a Node que prepare FFmpeg
+                    ws.send('START_STREAMING');
+
+                    // 3. Empezar a grabar y mandar pedazos de video
+                    mediaRecorder = new MediaRecorder(vStream, {
+                        mimeType: 'video/webm; codecs=vp8,opus',
+                        videoBitsPerSecond: 3000000 // 3 Mbps
+                    });
+
+                    // Cada vez que tengamos un pedazo de video de 1 segundo, lo mandamos al puente
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data && event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+                            ws.send(event.data);
+                        }
+                    };
+
+                    mediaRecorder.start(1000); // Cortar el video cada 1000ms (1 segundo)
+                };
+
+                ws.onclose = () => {
+                    statusText.innerText = "Desconectado del puente.";
+                    statusText.style.color = "#aaa";
+                    detenerTodo();
+                };
+
+                // Si el usuario le da al botón "Dejar de compartir" de Chrome
+                vStream.getVideoTracks()[0].onended = () => {
+                    detenerTodo();
+                };
+
+            } catch (err) {
+                console.error("Error al capturar:", err);
+                alert("Error al capturar la pantalla: " + err.message);
+            }
+        });
+
+        stopBtn.addEventListener('click', detenerTodo);
+
+        function detenerTodo() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            if (vStream) {
+                vStream.getTracks().forEach(t => t.stop());
+            }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+            preview.srcObject = null;
+            startBtn.style.display = "inline-block";
+            stopBtn.style.display = "none";
+            statusText.innerText = "Transmisión detenida.";
+            statusText.style.color = "#aaa";
+        }
+    </script>
+</body>
+</html>
