@@ -3,35 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mesa Técnica + Cloud - COOSAJO</title>
-    <!-- PWA Settings -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
-    <link rel="apple-touch-icon" href="LOGO COOSAJO SIN ESLOGAN.png">
-    
+    <title>COOSAJO SIGNAL - Gestor de Pantallas Verticales (9:16)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').then(() => {
-                console.log('Service Worker Registered');
-            });
-        }
-    </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .vumeter-bar { transition: height 0.1s ease; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0b1329; color: white; }
+        .glass { background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.12); }
+        .phone-mockup {
+            width: 340px;
+            height: 604px; /* Exact 9:16 aspect ratio */
+            border: 6px solid #1e293b;
+            border-radius: 28px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(21, 142, 69, 0.3);
+            overflow: hidden;
+            position: relative;
+            background-color: #000;
+        }
+        @keyframes scrollMarquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .marquee-anim { animation: scrollMarquee 20s linear infinite; }
     </style>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, deleteDoc, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3.540.0?bundle";
+        import { getFirestore, collection, setDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBGF-do5_cykTa9rB5NK-7ie4x4rpoYc0g",
@@ -43,567 +38,138 @@
         };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
-        signInAnonymously(auth).catch(err => console.error("Error de auth:", err));
 
+        let playlist = [
+            { id: 1, title: "Banner LATERAL 1", url: "uploads/LATERALE_1_1786571371.png", duration: 10, type: "image" },
+            { id: 2, title: "Banner LATERAL 2", url: "uploads/LATERAL_2_1786571370.png", duration: 10, type: "image" },
+            { id: 3, title: "Promoción MAGICUENTA", url: "uploads/MAGICUENTA_1786571375.png", duration: 12, type: "image" },
+            { id: 4, title: "Promoción META", url: "uploads/META_1786571373.png", duration: 12, type: "image" }
+        ];
 
+        let tickerText = "✨ ¡Bienvenido a COOSAJO R.L.! Conoce nuestras opciones de ahorro e inversión en todas las agencias.";
+        let currentSlideIndex = 0;
+        let slideTimer = null;
 
-        // ==========================================
-        // MÓDULO DE TRANSMISIÓN EN VIVO (WEBRTC)
-        // ==========================================
-        let localStream;
-        let ws;
-        let mediaRecorder;
-        let isStreaming = false;
-
-        window.initWebSocket = function(qualityStr = '720') {
-            if (ws) {
-                try { ws.close(); } catch(e) {}
-            }
-            const rtmpUrl = document.getElementById('rtmpUrlInput') ? document.getElementById('rtmpUrlInput').value : '';
-            const rtmpParam = rtmpUrl ? '&rtmp=' + encodeURIComponent(rtmpUrl) : '';
-            ws = new WebSocket('ws://localhost:8081/?quality=' + qualityStr + rtmpParam);
-            ws.onopen = () => {
-                const peerIdEl = document.getElementById('peer-id');
-                if (peerIdEl) {
-                    peerIdEl.textContent = 'Conectado a FFmpeg (Node.js)';
-                    peerIdEl.className = 'text-2xl font-black text-blue-500 tracking-tighter';
-                }
-            };
-            ws.onerror = (err) => {
-                console.error('Error de WebSocket:', err);
-                const peerIdEl = document.getElementById('peer-id');
-                if (peerIdEl) {
-                    peerIdEl.textContent = 'Error: ¿Node.js corriendo?';
-                    peerIdEl.className = 'text-2xl font-black text-red-500 tracking-tighter';
-                }
-            };
-            ws.onclose = () => {
-                const peerIdEl = document.getElementById('peer-id');
-                if (peerIdEl) {
-                    peerIdEl.textContent = 'Desconectado de FFmpeg';
-                    peerIdEl.className = 'text-2xl font-black text-yellow-500 tracking-tighter';
-                }
-            };
-        };
-
-        window.loadDevices = async function() {
-            try {
-                try {
-                    const temp1 = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                    temp1.getTracks().forEach(t => t.stop());
-                } catch(e1) {
-                    try {
-                        const temp2 = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        temp2.getTracks().forEach(t => t.stop());
-                    } catch(e2) {
-                        console.log("Aviso: Nombres de cámara genéricos por permisos.", e2);
-                    }
-                }
-
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const videoSelect = document.getElementById('videoSource');
-                const audioSelect = document.getElementById('audioSource');
-
-                videoSelect.innerHTML = '<option value="screen">🖥️ Pantallas y Ventanas (Recomendado)</option>';
-                audioSelect.innerHTML = '<option value="screen">Igual que el Video</option><option value="none">Sin Audio</option>';
-
-                devices.forEach(device => {
-                    if (device.kind === 'videoinput') {
-                        const opt = document.createElement('option');
-                        opt.value = device.deviceId;
-                        opt.text = device.label || `Cámara Externa detectada`;
-                        videoSelect.appendChild(opt);
-                    } else if (device.kind === 'audioinput') {
-                        const opt = document.createElement('option');
-                        opt.value = device.deviceId;
-                        opt.text = device.label || `Micrófono detectado`;
-                        audioSelect.appendChild(opt);
-                    }
-                });
-                alert("¡Equipos detectados correctamente! Abre las listas de 'Fuente de Video' y 'Fuente de Audio' para verlos.");
-            } catch (err) {
-                console.error("Error enumerando:", err);
-                alert("Error detectando equipos.\n\nDetalle técnico: " + (err.message || err) + "\n\nSi el error es 'undefined', Chrome está bloqueando la cámara porque necesitas abrir esto usando Safari, o mediante http://localhost.");
+        function updatePreview() {
+            if (playlist.length === 0) return;
+            const item = playlist[currentSlideIndex];
+            const imgEl = document.getElementById('previewImg');
+            if (imgEl) {
+                imgEl.src = item.url;
             }
         }
 
-        window.startCustomCapture = async function() {
-            const quality = document.getElementById('videoQuality').value;
-            // Reconectar el puente con la calidad seleccionada
-            initWebSocket(quality);
-            let screenConstraints = true;
-
-            if (quality === '720') {
-                screenConstraints = { width: { max: 1280 }, height: { max: 720 }, frameRate: { max: 24 } };
-            } else if (quality === '480') {
-                screenConstraints = { width: { max: 854 }, height: { max: 480 }, frameRate: { max: 24 } };
-            } else {
-                screenConstraints = { width: { max: 1920 }, height: { max: 1080 }, frameRate: { max: 30 } };
-            }
-
-            const vSource = document.getElementById('videoSource').value;
-            const aSource = document.getElementById('audioSource').value;
-
-            try {
-                let finalStream = new MediaStream();
-
-                let vStream;
-                try {
-                    if (vSource === 'screen') {
-                        try {
-                            vStream = await navigator.mediaDevices.getDisplayMedia({ video: screenConstraints, audio: (aSource === 'screen') });
-                        } catch(errScreen) {
-                            if (errScreen.name === 'OverconstrainedError' || errScreen.name === 'TypeError') {
-                                vStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-                            } else {
-                                throw errScreen;
-                            }
-                        }
-                    } else {
-                        let camOptions = vSource ? { deviceId: { exact: vSource } } : true;
-                        vStream = await navigator.mediaDevices.getUserMedia({ video: camOptions, audio: false });
-                    }
-                } catch(eVid) {
-                    throw new Error("VIDEO: " + (eVid.name || "Error") + " - " + (eVid.message || "Desconocido"));
-                }
-                const vHint = document.getElementById('videoHint') ? document.getElementById('videoHint').value : 'motion';
-                vStream.getVideoTracks().forEach(t => {
-                    t.contentHint = vHint; // 'motion' prioriza los fps (evita lag), 'detail' prioriza la nitidez
-                    finalStream.addTrack(t);
-                });
-
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const compressor = audioCtx.createDynamicsCompressor();
-                compressor.threshold.setValueAtTime(-24, audioCtx.currentTime);
-                compressor.knee.setValueAtTime(30, audioCtx.currentTime);
-                compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
-                compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
-                compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
-                
-                const gainNode = audioCtx.createGain();
-                gainNode.gain.setValueAtTime(1.5, audioCtx.currentTime);
-                
-                const audioDest = audioCtx.createMediaStreamDestination();
-                compressor.connect(gainNode);
-                gainNode.connect(audioDest);
-
-                if (aSource === 'screen') {
-                    if (vSource === 'screen') {
-                        vStream.getAudioTracks().forEach(t => {
-                            const sourceNode = audioCtx.createMediaStreamSource(new MediaStream([t]));
-                            sourceNode.connect(compressor);
-                        });
-                        audioDest.stream.getAudioTracks().forEach(t => finalStream.addTrack(t));
-                    }
-                } else if (aSource !== 'none') {
-                    try {
-                        const aStream = await navigator.mediaDevices.getUserMedia({
-                            audio: { deviceId: { exact: aSource } },
-                            video: false
-                        });
-                        aStream.getAudioTracks().forEach(t => {
-                            const sourceNode = audioCtx.createMediaStreamSource(new MediaStream([t]));
-                            sourceNode.connect(compressor);
-                        });
-                        audioDest.stream.getAudioTracks().forEach(t => finalStream.addTrack(t));
-                    } catch(eAud) {
-                        throw new Error("AUDIO: " + (eAud.name || "Error") + " - " + (eAud.message || "Desconocido"));
-                    }
-                }
-
-                localStream = finalStream;
-                const videoEl = document.getElementById('localVideo');
-                videoEl.srcObject = localStream;
-                videoEl.muted = true;
-                try { await videoEl.play(); } catch(e) {}
-                
-                document.getElementById('noSignal').classList.add('hidden');
-                document.getElementById('btnStartStream').disabled = false;
-                document.getElementById('btnStartStream').classList.remove('opacity-50', 'cursor-not-allowed');
-                document.getElementById('btnStopCapture').disabled = false;
-                document.getElementById('btnStopCapture').classList.remove('opacity-50', 'cursor-not-allowed');
-                
-                document.getElementById('btnMuteAudio').style.display = localStream.getAudioTracks().length > 0 ? 'block' : 'none';
-
-                // Ensure it's unmuted internally when captured newly
-                isAudioMuted = false;
-                const btnIcon = document.getElementById('muteIcon');
-                btnIcon.setAttribute('data-lucide', 'mic');
-                btnIcon.classList.remove('text-red-500');
-                btnIcon.classList.add('text-green-400');
-                lucide.createIcons();
-
-                if (localStream.getAudioTracks().length > 0) {
-                    setupVisualizer(localStream);
-                } else {
-                    for(let i=1; i<=5; i++) {
-                        const v = document.getElementById(`v${i}`);
-                        if(v) v.style.height = '0%';
-                    }
-                }
-
-                localStream.getVideoTracks()[0].onended = () => {
-                    window.stopCapture();
-                };
-            } catch (err) {
-                console.error("Error captura combinada:", err);
-                alert("Fallo al capturar:\n" + err.message);
-            }
+        function nextSlide() {
+            if (playlist.length === 0) return;
+            currentSlideIndex = (currentSlideIndex + 1) % playlist.length;
+            updatePreview();
         }
 
-        window.stopCapture = function() {
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
-            }
-            document.getElementById('localVideo').srcObject = null;
-            document.getElementById('noSignal').classList.remove('hidden');
-            document.getElementById('btnStartStream').disabled = true;
-            document.getElementById('btnStartStream').classList.add('opacity-50', 'cursor-not-allowed');
-            document.getElementById('btnStopCapture').disabled = true;
-            document.getElementById('btnStopCapture').classList.add('opacity-50', 'cursor-not-allowed');
-            document.getElementById('btnMuteAudio').style.display = 'none';
-            
-            if (isStreaming) {
-                window.stopStream();
-            }
-        }
+        function renderPlaylistTable() {
+            const container = document.getElementById('playlistContainer');
+            if (!container) return;
+            container.innerHTML = '';
 
-        window.startStream = async function() {
-            const rtmpInput = document.getElementById('rtmpUrlInput');
-            if (rtmpInput) {
-                let rtmpVal = rtmpInput.value.trim();
-                if (rtmpVal.startsWith('http://') || rtmpVal.startsWith('https://')) {
-                    const cleanRtmp = rtmpVal.replace(/^https?:\/\//i, 'rtmp://');
-                    if (confirm(`⚠️ DETECTADO PROTOCOLO WEB:\n\nHas ingresado una URL con "${rtmpVal.split(':')[0]}://". Para transmitir en vivo, el protocolo correcto de streaming debe ser RTMP.\n\n¿Deseas corregir automáticamente a:\n"${cleanRtmp}"?`)) {
-                        rtmpInput.value = cleanRtmp;
-                        const quality = document.getElementById('videoQuality').value;
-                        window.initWebSocket(quality);
-                        // Esperar un momento a que el canal WebSocket se reconecte
-                        await new Promise(resolve => setTimeout(resolve, 600));
-                    } else {
-                        return;
-                    }
-                } else if (!rtmpVal.startsWith('rtmp://') && !rtmpVal.startsWith('rtmps://')) {
-                    alert("❌ ERROR: La URL del servidor de destino debe comenzar con 'rtmp://' o 'rtmps://'.");
-                    return;
-                }
-            }
-
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                alert("❌ ERROR: El puente Node.js no está corriendo o no estás conectado.\n\nAbre la carpeta Web_OBS_RTMP y corre 'start_server.command' (Mac) o 'start_server.bat' (Windows).");
-                return;
-            }
-            if (!localStream) {
-                alert("Primero debes capturar tu pantalla/cámara.");
-                return;
-            }
-            if(confirm("¡ATENCIÓN! Esto enviará el video al servidor de PIT e interrumpirá la publicidad en TODAS las pantallas de las agencias. ¿Continuar?")) {
-                try {
-                    // Get dynamic playback URL from input
-                    const playbackUrlVal = document.getElementById('playbackUrlInput') ? document.getElementById('playbackUrlInput').value.trim() : 'http://10.60.59.15:8888/Mundial';
-
-                    // Send Firebase command to screens to switch to RTMP Iframe
-                    await setDoc(doc(db, 'artifacts', 'broadcast-system', 'platform', 'state'), {
-                        isLive: true,
-                        playbackUrl: playbackUrlVal,
-                        timestamp: Date.now()
-                    }, { merge: true });
-                    
-                    // Start MediaRecorder and push to WebSocket
-                    const currentQuality = document.getElementById('videoQuality').value;
-                    let browserBitrate = 2000000; // 720p = 2000k
-                    if (currentQuality === '480') browserBitrate = 1500000;
-                    if (currentQuality === '1080') browserBitrate = 3000000;
-
-                    const options = { 
-                        mimeType: 'video/webm; codecs="vp8, opus"',
-                        videoBitsPerSecond: browserBitrate
-                    };
-                    mediaRecorder = new MediaRecorder(localStream, options);
-
-                    mediaRecorder.ondataavailable = (event) => {
-                        if (event.data && event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-                            ws.send(event.data);
-                        }
-                    };
-
-                    mediaRecorder.start(100); // Enviar cada 100ms
-                    
-                    isStreaming = true;
-                    document.getElementById('btnStartStream').classList.add('hidden');
-                    document.getElementById('btnStopStream').classList.remove('hidden');
-                    document.getElementById('liveBlink').classList.remove('hidden');
-                } catch (e) {
-                    console.error("Error iniciando transmisión", e);
-                    alert("ERROR: No se pudo enviar la señal a Firebase o iniciar el MediaRecorder.\n\n" + e.message);
-                }
-            }
-        }
-
-        window.stopStream = async function() {
-            isStreaming = false;
-            
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-
-            document.getElementById('btnStopStream').classList.add('hidden');
-            document.getElementById('btnStartStream').classList.remove('hidden');
-            document.getElementById('liveBlink').classList.add('hidden');
-
-            await setDoc(doc(db, 'artifacts', 'broadcast-system', 'platform', 'state'), {
-                isLive: false,
-                timestamp: Date.now()
+            playlist.forEach((item, idx) => {
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between p-3 bg-slate-800/80 rounded-2xl border border-slate-700/60 hover:border-green-500/50 transition-all";
+                row.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <img src="${item.url}" class="w-12 h-16 object-cover rounded-lg border border-slate-600">
+                        <div>
+                            <p class="font-black text-sm text-white">${item.title}</p>
+                            <p class="text-[10px] text-green-400 font-bold uppercase tracking-wider">${item.duration} Segundos • ${item.type}</p>
+                        </div>
+                    </div>
+                    <button onclick="window.removeSlide(${idx})" class="p-2 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white rounded-xl transition-all">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+                container.appendChild(row);
             });
-        }
-
-        window.forceRemoteUpdate = async function() {
-            if(confirm("¿Forzar la actualización y reinicio de TODAS las pantallas?\n\nLas pantallas tardarán unos 10 segundos en reiniciarse.")) {
-                try {
-                    const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
-                    await setDoc(doc(db, "artifacts", "broadcast-system", "commands", "update"), {
-                        action: 'force_restart',
-                        timestamp: Date.now()
-                    });
-                    alert("¡Señal enviada a las agencias!");
-                } catch(e) {
-                    alert("Error: " + e.message);
-                }
-            }
-        }
-
-        async function startAgenciesMonitor() {
-            onSnapshot(collection(db, "artifacts", "broadcast-system", "agencies"), (snapshot) => {
-                let html = '';
-                let navHtml = '';
-                const now = Date.now();
-                let conectadas = 0;
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const secondsAgo = (now - data.lastPing) / 1000;
-                    const agencyName = data.name || doc.id;
-                    const isOnline = secondsAgo < 9000;
-                    
-                    // Sidebar Nav Item
-                    const isSelected = currentScope === doc.id;
-                    const btnClass = isSelected ? 
-                        'agency-nav-btn w-full text-left bg-purple-600 border border-purple-400 shadow-[0_0_15px_rgba(147,51,234,0.4)] p-3 rounded-xl transition-colors' : 
-                        'agency-nav-btn w-full text-left bg-slate-800 border border-slate-700 hover:bg-slate-700 p-3 rounded-xl transition-colors';
-                        
-                    navHtml += `
-                        <button data-id="${doc.id}" data-name="${agencyName}" onclick="window.selectScope('${doc.id}')" class="${btnClass}">
-                            <div class="flex items-center gap-2">
-                                <div class="w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-slate-500'}"></div>
-                                <div class="font-bold text-white text-[11px] truncate flex-1 leading-tight">${agencyName}</div>
-                            </div>
-                            <div class="text-[8px] text-slate-400 mt-1 font-mono">${data.localIP || 'IP desconocida'}</div>
-                        </button>
-                    `;
-
-                    if (isOnline) {
-                        conectadas++;
-                        let statusColor = 'text-slate-400';
-                        let dotColor = 'bg-slate-500';
-                        
-                        if (data.status === 'En Vivo') {
-                            statusColor = 'text-emerald-400';
-                            dotColor = 'bg-emerald-500 animate-pulse';
-                        } else if (data.status === 'Intentando Conectar a Mesa') {
-                            statusColor = 'text-yellow-400';
-                            dotColor = 'bg-yellow-500 animate-pulse';
-                        } else {
-                            statusColor = 'text-blue-400';
-                            dotColor = 'bg-blue-500';
-                        }
-                        
-                        html += `
-                            <div class="flex items-center justify-between p-2 bg-slate-800 rounded border border-slate-700">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full ${dotColor}"></div>
-                                    <div class="flex flex-col max-w-[120px]">
-                                        <span class="text-white text-[10px] font-bold uppercase truncate">${agencyName}</span>
-                                        <span class="text-slate-400 text-[8px] font-mono">${data.localIP || doc.id}</span>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <div class="flex flex-col items-end">
-                                        <span class="${statusColor} text-[9px] font-bold uppercase">${data.status}</span>
-                                        <span class="text-slate-500 text-[8px] font-mono">v${data.version || '?'} ${data.peerConnected ? '(Red OK)' : '(Red Fallando)'}</span>
-                                    </div>
-                                    <button onclick="restartAgency('${doc.id}')" class="bg-red-500 hover:bg-red-600 text-white text-[8px] font-bold px-2 py-1 rounded transition-colors" title="Forzar reinicio de esta pantalla">
-                                        <i data-lucide="power" class="w-3 h-3"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    }
-                });
-                
-                if (html === '') html = '<p class="text-slate-500 text-xs italic">Ninguna agencia reportando...</p>';
-                if (navHtml === '') navHtml = '<p class="text-slate-500 text-[9px] italic uppercase tracking-widest">No hay agencias conectadas aún.</p>';
-                
-                document.getElementById('agenciesList').innerHTML = html;
-                document.getElementById('agenciesNavList').innerHTML = navHtml;
-                document.getElementById('connections-count').textContent = `Agencias Online: ${conectadas}`;
-                lucide.createIcons();
-            });
-        }
-        startAgenciesMonitor();
-
-        window.restartAgency = async (agencyId) => {
-            if(confirm(`¿Estás seguro de forzar el reinicio de la pantalla en ${agencyId}?`)) {
-                try {
-                    const { doc: firestoreDoc, setDoc: firestoreSetDoc } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
-                    await firestoreSetDoc(firestoreDoc(db, "artifacts", "broadcast-system", "agencies", agencyId), {
-                        forceRestart: Date.now()
-                    }, { merge: true });
-                    // No necesitas mostrar alert, la pantalla se reiniciará sola en unos segundos
-                } catch(e) {
-                    console.error("Error al enviar reinicio", e);
-                    alert("Error detallado al enviar señal: " + e.message);
-                }
-            }
-        };
-
-        function setupVisualizer(stream) {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioCtx.createMediaStreamSource(stream);
-            const analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 32;
-            source.connect(analyser);
-            const data = new Uint8Array(analyser.frequencyBinCount);
-            function draw() {
-                if(!localStream) return;
-                requestAnimationFrame(draw);
-                analyser.getByteFrequencyData(data);
-                for(let i=1; i<=5; i++) {
-                    const h = (data[i*2] / 255) * 100;
-                    document.getElementById(`v${i}`).style.height = h + '%';
-                }
-            }
-            draw();
-        }
-
-        let currentScope = 'general';
-
-        window.selectScope = function(scopeId) {
-            currentScope = scopeId;
-            
-            // Actualizar UI del menú lateral
-            const btnGen = document.getElementById('btnGeneralContent');
-            if (btnGen) {
-                btnGen.className = `w-full text-left p-3 rounded-xl mb-4 transition-colors ${scopeId === 'general' ? 'bg-blue-600 border border-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'bg-slate-800 border border-slate-700 hover:bg-slate-700'}`;
-            }
-            
-            document.querySelectorAll('.agency-nav-btn').forEach(btn => {
-                if(btn.dataset.id === scopeId) {
-                    btn.className = 'agency-nav-btn w-full text-left bg-purple-600 border border-purple-400 shadow-[0_0_15px_rgba(147,51,234,0.4)] p-3 rounded-xl transition-colors';
-                } else {
-                    btn.className = 'agency-nav-btn w-full text-left bg-slate-800 border border-slate-700 hover:bg-slate-700 p-3 rounded-xl transition-colors';
-                }
-            });
-        };
-        
-        // Iniciar con general por defecto
-        document.addEventListener('DOMContentLoaded', () => {
-            window.selectScope('general');
-        });
-
-
-
-        let isAudioMuted = false;
-        window.toggleMuteAudio = function() {
-            if (!localStream) return;
-            const audioTracks = localStream.getAudioTracks();
-            if (audioTracks.length === 0) return;
-            
-            isAudioMuted = !isAudioMuted;
-            audioTracks.forEach(t => t.enabled = !isAudioMuted);
-            
-            const btnIcon = document.getElementById('muteIcon');
-            if (isAudioMuted) {
-                btnIcon.setAttribute('data-lucide', 'mic-off');
-                btnIcon.classList.remove('text-green-400');
-                btnIcon.classList.add('text-red-500');
-            } else {
-                btnIcon.setAttribute('data-lucide', 'mic');
-                btnIcon.classList.remove('text-red-500');
-                btnIcon.classList.add('text-green-400');
-            }
             lucide.createIcons();
+        }
+
+        window.removeSlide = function(index) {
+            playlist.splice(index, 1);
+            if (currentSlideIndex >= playlist.length) currentSlideIndex = 0;
+            renderPlaylistTable();
+            updatePreview();
         };
 
-        let isRemoteMuted = false;
-        onSnapshot(doc(db, 'artifacts', 'broadcast-system', 'platform', 'state'), (docSnap) => {
-            if(docSnap.exists()) {
-                const state = docSnap.data();
-                isRemoteMuted = !!state.muteVideos;
-                const btn = document.getElementById('btnRemoteMute');
-                if (btn) {
-                    if (isRemoteMuted) {
-                        btn.innerHTML = `<i data-lucide="volume-x" class="w-3 h-3 text-red-500"></i> <span>Audio Silenciado</span>`;
-                    } else {
-                        btn.innerHTML = `<i data-lucide="volume-2" class="w-3 h-3 text-green-400"></i> <span>Audio Encendido</span>`;
-                    }
+        window.addSlideFromInput = function() {
+            const titleInput = document.getElementById('slideTitleInput');
+            const fileInput = document.getElementById('slideFileInput');
+            const durInput = document.getElementById('slideDurInput');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("Por favor selecciona una imagen o video vertical (9:16).");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const newItem = {
+                    id: Date.now(),
+                    title: titleInput.value || file.name,
+                    url: e.target.result,
+                    duration: parseInt(durInput.value) || 10,
+                    type: file.type.startsWith('video') ? 'video' : 'image'
+                };
+                playlist.push(newItem);
+                titleInput.value = '';
+                fileInput.value = '';
+                renderPlaylistTable();
+                updatePreview();
+                alert("¡Contenido vertical añadido a la lista!");
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.publishToCloud = async function() {
+            const tickerVal = document.getElementById('tickerInput').value;
+            const statusBtn = document.getElementById('publishBtn');
+            statusBtn.disabled = true;
+            statusBtn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Publicando a Nube...`;
+            lucide.createIcons();
+
+            try {
+                // Actualizar Firebase Firestore Cloud
+                await setDoc(doc(db, "artifacts", "broadcast-system", "platform", "state"), {
+                    playlist: playlist,
+                    ticker: tickerVal,
+                    timestamp: Date.now()
+                }, { merge: true });
+
+                statusBtn.className = "w-full py-4 bg-green-600 hover:bg-green-500 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-[0_0_20px_rgba(21,142,69,0.5)] transition-all flex items-center justify-center gap-2";
+                statusBtn.innerHTML = `<i data-lucide="check-circle-2" class="w-5 h-5"></i> ¡Publicado Exitosamente en las Pantallas!`;
+                lucide.createIcons();
+
+                setTimeout(() => {
+                    statusBtn.disabled = false;
+                    statusBtn.innerHTML = `<i data-lucide="rocket" class="w-5 h-5"></i> Publicar Cambios a Pantallas Verticales`;
                     lucide.createIcons();
-                }
-            }
-        });
-
-        window.toggleRemoteVideoMute = async function() {
-            try {
-                await setDoc(doc(db, 'artifacts', 'broadcast-system', 'platform', 'state'), {
-                    muteVideos: !isRemoteMuted
-                }, { merge: true });
-            } catch (errGlobal) {
-                alert("La captura de video fue bloqueada o cancelada.\n\nMotivo del navegador: " + (errGlobal.message || errGlobal) + "\n\n(Recuerda que Google Chrome no permite capturar pantalla si lo abres como un archivo normal o por HTTP en vez de HTTPS/localhost. ¡Prueba en Safari!)");
-            }
-        };
-
-        window.controlPrompter = async function(action) {
-            try {
-                await setDoc(doc(db, 'artifacts', 'broadcast-system', 'platform', 'state'), {
-                    prompterCommand: { action: action, timestamp: Date.now() }
-                }, { merge: true });
-                alert(action === 'start' ? 'Orden de abrir Prompter enviada.' : 'Orden de cerrar Prompter enviada.');
-            } catch (errGlobal) {
-                alert("La captura de video fue bloqueada o cancelada.\n\nMotivo del navegador: " + (errGlobal.message || errGlobal) + "\n\n(Recuerda que Google Chrome no permite capturar pantalla si lo abres como un archivo normal o por HTTP en vez de HTTPS/localhost. ¡Prueba en Safari!)");
+                }, 3000);
+            } catch (err) {
+                console.error("Error publicando:", err);
+                alert("Error al publicar en la nube: " + err.message);
+                statusBtn.disabled = false;
+                statusBtn.innerHTML = `<i data-lucide="rocket" class="w-5 h-5"></i> Publicar Cambios a Pantallas Verticales`;
+                lucide.createIcons();
             }
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            initWebSocket('720'); // Inicializar al cargar la página con la calidad por defecto
+            renderPlaylistTable();
+            updatePreview();
+            slideTimer = setInterval(nextSlide, 5000);
 
-            // Re-vincular WebSocket cuando cambie la URL o la calidad
-            const rtmpInput = document.getElementById('rtmpUrlInput');
-            if (rtmpInput) {
-                rtmpInput.addEventListener('change', () => {
-                    const quality = document.getElementById('videoQuality').value;
-                    initWebSocket(quality);
-                });
-
-                rtmpInput.addEventListener('input', () => {
-                    const rtmpVal = rtmpInput.value.trim();
-                    const playbackInput = document.getElementById('playbackUrlInput');
-                    if (playbackInput) {
-                        // Convertir rtmp://host/app a http://host:8888/app
-                        const match = rtmpVal.match(/^rtmps?:\/\/([^/]+)\/(.+)$/i);
-                        if (match) {
-                            const host = match[1];
-                            const app = match[2];
-                            playbackInput.value = `http://${host}:8888/${app}`;
-                        }
-                    }
-                });
-            }
-            const qualitySelect = document.getElementById('videoQuality');
-            if (qualitySelect) {
-                qualitySelect.addEventListener('change', () => {
-                    const quality = qualitySelect.value;
-                    initWebSocket(quality);
+            const tickerInput = document.getElementById('tickerInput');
+            if (tickerInput) {
+                tickerInput.addEventListener('input', (e) => {
+                    const textEl = document.getElementById('previewMarquee');
+                    if (textEl) textEl.textContent = e.target.value;
                 });
             }
         });
@@ -611,174 +177,129 @@
 </head>
 <body class="min-h-screen flex flex-col p-6">
 
-    <header class="flex justify-between items-center mb-6 glass rounded-3xl p-6">
+    <!-- HEADER SUPERIOR -->
+    <header class="flex justify-between items-center mb-8 glass rounded-3xl p-6 shadow-xl border-green-500/20">
         <div class="flex items-center gap-4">
-            <div class="bg-[#158e45] p-3 rounded-2xl relative">
-                <i data-lucide="radio" class="w-8 h-8 text-white"></i>
-                <div id="liveBlink" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping hidden"></div>
+            <div class="bg-gradient-to-br from-[#158e45] to-[#0e6330] p-4 rounded-2xl shadow-lg border border-green-400/30">
+                <i data-lucide="smartphone" class="w-8 h-8 text-white"></i>
             </div>
             <div>
-                <h1 class="text-3xl font-900 uppercase tracking-tighter leading-none">Mesa Técnica</h1>
-                <p class="text-green-500 text-sm font-bold uppercase tracking-widest mt-1">Control General de Cartelería</p>
+                <h1 class="text-3xl font-black uppercase tracking-tighter text-white">COOSAJO SIGNAL</h1>
+                <p class="text-green-400 text-xs font-bold uppercase tracking-widest mt-1">Gestor de Contenido para Pantallas Verticales (9:16)</p>
             </div>
         </div>
-        <div class="glass px-6 py-2 rounded-2xl border-green-500/30 text-center relative">
-            <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Estado del Puente Node.js</p>
-            <p id="peer-id" class="text-2xl font-black text-green-500 tracking-tighter">Iniciando...</p>
-            <p id="connections-count" class="absolute -bottom-6 left-0 right-0 text-[10px] font-bold text-blue-400 uppercase tracking-widest">Agencias Online: 0</p>
+
+        <div class="flex items-center gap-4">
+            <div class="glass px-6 py-3 rounded-2xl border-green-500/30 flex items-center gap-3">
+                <div class="w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
+                <div>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Servidor Nube</p>
+                    <p class="text-sm font-black text-green-400">Google Firebase & GitHub OK</p>
+                </div>
+            </div>
         </div>
     </header>
 
-    <main class="flex-1 grid grid-cols-12 gap-6">
+    <!-- PANEL PRINCIPAL DE TRABAJO -->
+    <main class="flex-1 grid grid-cols-12 gap-8 items-start">
         
-        <!-- BARRA LATERAL (4 COLUMNAS) -->
-        <div class="col-span-4 flex flex-col gap-4">
-            <div class="glass rounded-3xl p-4 flex flex-col h-full">
-                <h2 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 border-b border-slate-700 pb-2">Agencias Conectadas</h2>
-                
-                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Pantallas Individuales</h3>
-                <div id="agenciesNavList" class="flex flex-col gap-2 overflow-y-auto custom-scrollbar">
-                    <p class="text-slate-600 text-xs italic">Cargando...</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-span-8 flex flex-col gap-4">
-            <div class="glass rounded-3xl p-6 flex flex-col h-full">
-                <h2 class="text-lg font-black uppercase tracking-widest text-white border-b border-slate-700 pb-3 mb-4 flex items-center gap-2">
-                    <i data-lucide="video" class="text-green-500"></i> Transmisión Vía RTMP
+        <!-- COLUMNA IZQUIERDA: GESTIÓN DE CONTENIDOS (7 COLUMNAS) -->
+        <div class="col-span-7 flex flex-col gap-6">
+            
+            <!-- TARJETA: AGREGAR CONTENIDO VERTICAL -->
+            <div class="glass rounded-3xl p-6 shadow-xl">
+                <h2 class="text-lg font-black uppercase tracking-widest text-white border-b border-slate-700/80 pb-3 mb-4 flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="text-green-400"></i> Subir Nuevo Contenido Vertical (9:16)
                 </h2>
                 
-                <div class="relative flex-1 bg-black rounded-2xl overflow-hidden border-2 border-slate-700 shadow-xl flex items-center justify-center min-h-[300px]">
-                    <video id="localVideo" class="w-full h-full object-contain" autoplay muted playsinline></video>
-                    
-                    <button id="btnMuteAudio" onclick="toggleMuteAudio()" class="absolute bottom-4 right-4 bg-slate-800/80 hover:bg-slate-700 p-2.5 rounded-full text-white border border-slate-600 transition-colors shadow-lg z-20" title="Silenciar / Activar Audio Transmitido" style="display:none;">
-                        <i id="muteIcon" data-lucide="mic" class="w-5 h-5 text-green-400"></i>
-                    </button>
-
-                    <div id="noSignal" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 bg-slate-900/50">
-                        <i data-lucide="video-off" class="w-12 h-12 mb-3 opacity-30"></i>
-                        <p class="font-bold uppercase tracking-widest opacity-50 text-xs">Sin Señal</p>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Título de la Causa / Promo</label>
+                        <input id="slideTitleInput" type="text" placeholder="Ej: Promoción Ahorro Verano" class="w-full bg-slate-900/90 text-white font-bold text-xs rounded-xl border border-slate-700 p-3 outline-none focus:border-green-500 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Tiempo de Exhibición (Segundos)</label>
+                        <input id="slideDurInput" type="number" value="10" min="3" max="60" class="w-full bg-slate-900/90 text-white font-bold text-xs rounded-xl border border-slate-700 p-3 outline-none focus:border-green-500 transition-all">
                     </div>
                 </div>
 
-                <div class="col-span-2 border-t border-slate-700 pt-4 mt-2">
-                    <div class="flex justify-between items-center mb-3">
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                            <i data-lucide="sliders" class="inline w-3 h-3 mb-0.5"></i> Orígenes de AV
-                        </label>
-                        <button onclick="loadDevices()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-colors">
-                            <i data-lucide="search" class="w-3 h-3"></i> 1. Detectar Equipos
-                        </button>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <div>
-                            <label class="block text-[9px] font-bold text-slate-500 mb-1 uppercase tracking-widest">Fuente de Video</label>
-                            <select id="videoSource" class="w-full bg-slate-900 text-white font-bold text-[10px] rounded border border-slate-700 p-2 outline-none focus:border-blue-500">
-                                <option value="screen">Pantalla / Ventana OBS</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[9px] font-bold text-slate-500 mb-1 uppercase tracking-widest">Fuente de Audio</label>
-                            <select id="audioSource" class="w-full bg-slate-900 text-white font-bold text-[10px] rounded border border-slate-700 p-2 outline-none focus:border-blue-500">
-                                <option value="screen">Igual que el Video</option>
-                                <option value="none">Sin Audio</option>
-                            </select>
-                        </div>
-                    </div>
- 
-                    <div class="mb-4">
-                        <label class="block text-[9px] font-bold text-slate-500 mb-1 uppercase tracking-widest">Servidor Destino RTMP</label>
-                        <input id="rtmpUrlInput" type="text" value="rtmp://10.60.59.15/Mundial" class="w-full bg-slate-900 text-white font-bold text-[10px] rounded border border-slate-700 p-2 outline-none focus:border-blue-500" placeholder="rtmp://servidor/clave">
-                    </div>
+                <div class="mb-4">
+                    <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Archivo Vertical (.PNG, .JPG, .MP4 - 1080x1920)</label>
+                    <input id="slideFileInput" type="file" accept="image/*,video/*" class="w-full bg-slate-900/90 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 p-3 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-green-600 file:text-white hover:file:bg-green-500 cursor-pointer">
+                </div>
 
-                    <div class="mb-4">
-                        <label class="block text-[9px] font-bold text-slate-500 mb-1 uppercase tracking-widest">URL de Reproducción (Visor Pantallas)</label>
-                        <input id="playbackUrlInput" type="text" value="http://10.60.59.15:8888/Mundial" class="w-full bg-slate-900 text-white font-bold text-[10px] rounded border border-slate-700 p-2 outline-none focus:border-blue-500" placeholder="http://servidor:puerto/canal">
-                    </div>
+                <button onclick="window.addSlideFromInput()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="upload-cloud" class="w-4 h-4 text-green-400"></i> Añadir a la Lista de Transmisión
+                </button>
+            </div>
 
-                    <div class="mb-4 grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[9px] font-bold text-slate-500 mb-1 uppercase tracking-widest">Resolución</label>
-                            <select id="videoQuality" class="w-full bg-slate-900 text-white font-bold text-[10px] rounded border border-slate-700 p-2 outline-none focus:border-blue-500">
-                                <option value="1080">1080p a 30fps (Alta Calidad)</option>
-                                <option value="720" selected>720p a 24fps (Recomendado)</option>
-                                <option value="480">480p a 24fps (Ahorro Máximo)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[9px] font-bold text-slate-500 mb-1 uppercase tracking-widest">Optimización de Red</label>
-                            <select id="videoHint" class="w-full bg-slate-900 text-white font-bold text-[10px] rounded border border-slate-700 p-2 outline-none focus:border-blue-500" title="Si hay lag, priorizar fluidez baja la nitidez pero evita que el video se trabe.">
-                                <option value="motion" selected>Fluidez (Sin Lag)</option>
-                                <option value="detail">Nitidez (Puede causar Lag)</option>
-                            </select>
-                        </div>
-                    </div>
+            <!-- TARJETA: EDITAR MARQUESINA EN VIVO -->
+            <div class="glass rounded-3xl p-6 shadow-xl">
+                <h2 class="text-lg font-black uppercase tracking-widest text-white border-b border-slate-700/80 pb-3 mb-4 flex items-center gap-2">
+                    <i data-lucide="message-square" class="text-blue-400"></i> Texto de Marquesina Inferior (Ticker)
+                </h2>
+                <textarea id="tickerInput" rows="2" class="w-full bg-slate-900/90 text-white font-bold text-xs rounded-xl border border-slate-700 p-3 outline-none focus:border-blue-500 transition-all">✨ ¡Ahorrar tiene premio! Conoce nuestras promociones de Magicuenta y créditos en agencias COOSAJO.</textarea>
+            </div>
 
-                    <div class="flex gap-2 mb-2">
-                        <button onclick="startCustomCapture()" class="w-full bg-slate-700 hover:bg-slate-600 p-3 rounded-xl flex items-center justify-center gap-2 transition-all font-black uppercase text-[11px] tracking-wider shadow-lg text-white mb-2">
-                            <i data-lucide="power" class="w-4 h-4"></i> 2. Capturar Seleccionados
-                        </button>
+            <!-- TARJETA: LISTA DE REPRODUCCIÓN DE PANTALLAS -->
+            <div class="glass rounded-3xl p-6 shadow-xl">
+                <h2 class="text-lg font-black uppercase tracking-widest text-white border-b border-slate-700/80 pb-3 mb-4 flex items-center gap-2">
+                    <i data-lucide="layers" class="text-purple-400"></i> Lista de Carrusel Activo en Pantallas
+                </h2>
+                <div id="playlistContainer" class="flex flex-col gap-3 max-h-[260px] overflow-y-auto pr-2">
+                    <!-- Filas dinámicas -->
+                </div>
+            </div>
+
+            <!-- BOTÓN ACCIÓN PRINCIPAL -->
+            <button id="publishBtn" onclick="window.publishToCloud()" class="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-[0_0_25px_rgba(21,142,69,0.5)] transition-all flex items-center justify-center gap-2">
+                <i data-lucide="rocket" class="w-5 h-5"></i> Publicar Cambios a Pantallas Verticales
+            </button>
+
+        </div>
+
+        <!-- COLUMNA DERECHA: SIMULADOR DE PANTALLA VERTICAL (5 COLUMNAS) -->
+        <div class="col-span-5 flex flex-col items-center justify-center">
+            <div class="text-center mb-4">
+                <span class="bg-green-500/20 text-green-400 text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border border-green-500/40">
+                    📺 Simulación en Vivo TV Vertical (9:16)
+                </span>
+            </div>
+
+            <!-- SIMULADOR 9:16 -->
+            <div class="phone-mockup flex flex-col justify-between p-4">
+                
+                <!-- HEADER SIMULADO -->
+                <div class="flex justify-between items-center bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 z-20">
+                    <div class="text-left">
+                        <p class="font-black text-xs text-white leading-none">COOSAJO</p>
+                        <p class="text-[8px] text-green-400 font-bold uppercase tracking-wider">Señalización TV</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-black text-xs text-white leading-none">17:35</p>
+                        <p class="text-[8px] text-slate-400 font-bold uppercase">Esquipulas • 24°C</p>
                     </div>
                 </div>
 
-                <div class="flex gap-4">
-                    <button id="btnStartStream" onclick="window.startStream()" disabled class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded tracking-widest text-[11px] uppercase transition-all shadow-[0_0_15px_rgba(5,150,105,0.4)] opacity-50 cursor-not-allowed">
-                        2. Iniciar Transmisión
-                    </button>
-                    <button id="btnStopStream" onclick="window.stopStream()" class="hidden w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded tracking-widest text-[11px] uppercase transition-all shadow-[0_0_15px_rgba(220,38,38,0.4)]">
-                        3. Detener Transmisión
-                    </button>
-                    <button id="btnStopCapture" onclick="window.stopCapture()" disabled class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded tracking-widest text-[11px] uppercase transition-all shadow-[0_0_15px_rgba(220,38,38,0.4)] opacity-50 cursor-not-allowed">
-                        3. Detener Captura
-                    </button>
+                <!-- CONTENEDOR DE IMAGEN VERTICAL -->
+                <div class="absolute inset-0 z-10 flex items-center justify-center p-2 pt-16 pb-14">
+                    <img id="previewImg" src="uploads/LATERALE_1_1786571371.png" class="w-full h-full object-cover rounded-xl shadow-lg border border-slate-800">
                 </div>
 
-                <div class="mt-4 pt-4 border-t border-slate-800">
-                    <button onclick="window.forceRemoteUpdate()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded tracking-widest text-[10px] uppercase transition-all shadow-[0_0_15px_rgba(79,70,229,0.4)] flex items-center justify-center gap-2">
-                        <i data-lucide="refresh-cw" class="w-3 h-3"></i> Forzar Actualización y Reinicio en Agencias
-                    </button>
-                </div>
-
-                <div class="mt-4 pt-4 border-t border-slate-800">
-                    <h3 class="text-white font-bold text-[10px] uppercase mb-2 flex items-center gap-2"><i data-lucide="monitor-play" class="w-4 h-4 text-purple-400"></i> Control de Prompter Remoto</h3>
-                    <div class="flex gap-2">
-                        <button onclick="window.controlPrompter('start')" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded tracking-widest text-[10px] uppercase transition-all shadow-[0_0_10px_rgba(22,163,74,0.4)] flex items-center justify-center gap-1">
-                            <i data-lucide="play" class="w-3 h-3"></i> Abrir
-                        </button>
-                        <button onclick="window.controlPrompter('stop')" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded tracking-widest text-[10px] uppercase transition-all shadow-[0_0_10px_rgba(220,38,38,0.4)] flex items-center justify-center gap-1">
-                            <i data-lucide="square" class="w-3 h-3"></i> Cerrar
-                        </button>
+                <!-- MARQUESINA SIMULADA -->
+                <div class="relative z-20 bg-slate-900/90 border-t-2 border-green-500 rounded-b-xl py-2 px-3 overflow-hidden">
+                    <div class="whitespace-nowrap font-extrabold text-[10px] text-white tracking-wide marquee-anim">
+                        <span id="previewMarquee">✨ ¡Ahorrar tiene premio! Conoce nuestras promociones de Magicuenta y créditos en agencias COOSAJO.</span>
                     </div>
                 </div>
 
-                <div class="mt-4 pt-4 border-t border-slate-800">
-                    <h3 class="text-white font-bold text-[10px] uppercase mb-2 flex items-center gap-2"><i data-lucide="volume-x" class="w-4 h-4 text-orange-400"></i> Audio de Videos (Playlist)</h3>
-                    <button onclick="window.toggleRemoteVideoMute()" id="btnRemoteMute" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded tracking-widest text-[10px] uppercase transition-all shadow-[0_0_10px_rgba(0,0,0,0.4)] flex items-center justify-center gap-2">
-                        <i data-lucide="volume-2" class="w-3 h-3 text-green-400"></i> <span>Audio Encendido</span>
-                    </button>
-                </div>
-
-                <div class="mt-8 bg-slate-900 p-4 rounded-xl border border-slate-700">
-                    <h3 class="text-white font-bold text-[10px] uppercase mb-4 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i> Monitor de Agencias en Tiempo Real</h3>
-                    <div id="agenciesList" class="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                        <p class="text-slate-500 text-xs italic">Esperando latidos...</p>
-                    </div>
-                </div>
-
-                <div class="h-10 mt-4 border border-slate-700 rounded-lg p-2 bg-slate-900">
-                    <div class="flex justify-between items-end h-full px-2 gap-1">
-                        <div class="flex-1 bg-green-500/20 rounded-t-sm relative overflow-hidden"><div id="v1" class="absolute bottom-0 w-full bg-green-500 vumeter-bar" style="height: 0%"></div></div>
-                        <div class="flex-1 bg-green-500/20 rounded-t-sm relative overflow-hidden"><div id="v2" class="absolute bottom-0 w-full bg-green-500 vumeter-bar" style="height: 0%"></div></div>
-                        <div class="flex-1 bg-green-500/20 rounded-t-sm relative overflow-hidden"><div id="v3" class="absolute bottom-0 w-full bg-green-500 vumeter-bar" style="height: 0%"></div></div>
-                        <div class="flex-1 bg-green-500/20 rounded-t-sm relative overflow-hidden"><div id="v4" class="absolute bottom-0 w-full bg-yellow-500 vumeter-bar" style="height: 0%"></div></div>
-                        <div class="flex-1 bg-green-500/20 rounded-t-sm relative overflow-hidden"><div id="v5" class="absolute bottom-0 w-full bg-red-500 vumeter-bar" style="height: 0%"></div></div>
-                    </div>
-                </div>
             </div>
         </div>
 
+    </main>
 
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>
