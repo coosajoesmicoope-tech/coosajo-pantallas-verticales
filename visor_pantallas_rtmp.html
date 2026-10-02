@@ -68,7 +68,7 @@
                 <i id="weatherIcon" data-lucide="thermometer" class="w-7 h-7 text-[#158e45]"></i>
                 <div>
                     <div id="tempValue" class="font-black text-2xl text-[#172e59] leading-none tracking-tighter">--°C</div>
-                    <div class="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Esquipulas</div>
+                    <div id="cityName" class="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Buscando ubicación...</div>
                 </div>
             </div>
 
@@ -576,13 +576,41 @@
 
         async function fetchWeather() {
             try {
-                // Coordenadas de Esquipulas, Guatemala
-                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=14.5667&longitude=-89.35&current_weather=true');
+                let lat = 14.5667;
+                let lon = -89.35;
+                let cityName = "Guatemala";
+
+                // Intento 1: Detección por IP pública rápida de la Agencia
+                try {
+                    const ipGeoRes = await fetch('https://ipapi.co/json/');
+                    if (ipGeoRes.ok) {
+                        const geoData = await ipGeoRes.json();
+                        if (geoData.latitude && geoData.longitude) {
+                            lat = geoData.latitude;
+                            lon = geoData.longitude;
+                            cityName = geoData.city || geoData.region || "Guatemala";
+                        }
+                    }
+                } catch(eGeo) {
+                    console.log("Aviso: usando geolocalización fallback", eGeo);
+                }
+
+                // Intento 2: HTML5 Geolocation de la TV / Navegador si está disponible
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition((pos) => {
+                        lat = pos.coords.latitude;
+                        lon = pos.coords.longitude;
+                    }, () => {});
+                }
+
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
                 const data = await res.json();
                 const temp = Math.round(data.current_weather.temperature);
                 const isDay = data.current_weather.is_day;
                 
                 document.getElementById('tempValue').textContent = `${temp}°C`;
+                const cityEl = document.getElementById('cityName');
+                if (cityEl) cityEl.textContent = cityName.toUpperCase();
                 
                 const icon = document.getElementById('weatherIcon');
                 if (temp > 28) {
@@ -598,6 +626,8 @@
                 lucide.createIcons();
             } catch (e) {
                 console.error("Error obteniendo clima:", e);
+                const cityEl = document.getElementById('cityName');
+                if (cityEl) cityEl.textContent = "COOSAJO";
             }
         }
         fetchWeather();
